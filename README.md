@@ -1,0 +1,2 @@
+# QLDA_22N10_G7_HTTPS
+Quản Lý Dự Án 22NH10 Nhóm G7
