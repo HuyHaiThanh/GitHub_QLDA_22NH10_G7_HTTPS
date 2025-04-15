@@ -1,0 +1,7 @@
+Core
+Game
+Player
+Analytics
+Authentication
+UI
+AI

@@ -1,82 +1,55 @@
-# Python bytecode files
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
+*.py~
 
 # Distribution / packaging
-dist/
-build/
-*.egg-info/
 .Python
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+tags
+MANIFEST
 
-# Environment directories
+# Environments
+.env
+.venv
 env/
-env.bak/
 venv/
+ENV/
+env.bak/
 venv.bak/
 
-# Frappe specific
-node_modules
-.DS_Store
-*.swp
-*.dump
-local
-*.local
-local.*
+# Dependency directories
 node_modules/
+jspm_packages/
 
-# Log files and logs directory
-logs/*.log
-logs/scheduler.log.json
-logs/*.json
-logs/stderr
-logs/worker.log
-logs/worker.error.log
-log/
-logs/*
+# IDEs and editors
+.vscode/
+.vs/
+.idea/
+.kdev4/
+*.kdev4
+*.DS_Store
+*.swp
+*.comp.js
+.wnf-lang-status
+*debug.log
 
-# Cache and temporary files
-.cache/
-*.pyc
-.pytest_cache/
-.ipynb_checkpoints
-.coverage
-coverage.xml
-htmlcov
-.terminal-history.json
+# Helix Editor
+.helix/
 
-# Dev environment
-.env
-.vscode
-.idea
-*.sublime-workspace
-.vimrc
-.nvimrc
-.npm-debug.log
-
-# Frappe temp/dynamic files
-sites/*/private/*
-sites/*/public/files/*
-sites/*/private/files/*
-sites/*/error-snapshots/*
-sites/*/locks/*
-sites/*/site_config.json
-sites/*/task-logs/*
-sites/*/task-logs/*
-sites/.task-logs/*
-sites/*/backup/*
-sites/*/error_snapshots/*
-sites/*/locks/*
-
-# Caro Game specific
-caro_game/docs/_build/*
-caro_game/public/dist/*
-caro_game/cypress/screenshots/*
-caro_game/cypress/videos/*
-caro_game/cypress/fixtures/example.json
-
-# Redis dumps
-dump.rdb
-
-# Docs
-docs/current
+# Aider AI Chat
+.aider*
