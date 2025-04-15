@@ -1,0 +1,82 @@
+# Python bytecode files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+.Python
+
+# Environment directories
+env/
+env.bak/
+venv/
+venv.bak/
+
+# Frappe specific
+node_modules
+.DS_Store
+*.swp
+*.dump
+local
+*.local
+local.*
+node_modules/
+
+# Log files and logs directory
+logs/*.log
+logs/scheduler.log.json
+logs/*.json
+logs/stderr
+logs/worker.log
+logs/worker.error.log
+log/
+logs/*
+
+# Cache and temporary files
+.cache/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints
+.coverage
+coverage.xml
+htmlcov
+.terminal-history.json
+
+# Dev environment
+.env
+.vscode
+.idea
+*.sublime-workspace
+.vimrc
+.nvimrc
+.npm-debug.log
+
+# Frappe temp/dynamic files
+sites/*/private/*
+sites/*/public/files/*
+sites/*/private/files/*
+sites/*/error-snapshots/*
+sites/*/locks/*
+sites/*/site_config.json
+sites/*/task-logs/*
+sites/*/task-logs/*
+sites/.task-logs/*
+sites/*/backup/*
+sites/*/error_snapshots/*
+sites/*/locks/*
+
+# Caro Game specific
+caro_game/docs/_build/*
+caro_game/public/dist/*
+caro_game/cypress/screenshots/*
+caro_game/cypress/videos/*
+caro_game/cypress/fixtures/example.json
+
+# Redis dumps
+dump.rdb
+
+# Docs
+docs/current
