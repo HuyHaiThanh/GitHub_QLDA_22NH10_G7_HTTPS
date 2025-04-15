@@ -1,4 +1,4 @@
-Core
+Game_Core
 Game
 Player
 Analytics
