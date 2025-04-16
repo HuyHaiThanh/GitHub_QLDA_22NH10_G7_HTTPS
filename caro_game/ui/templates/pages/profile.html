@@ -1,0 +1,465 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Hồ Sơ{% endblock %}
+
+{% block page_content %}
+<div class="profile-container">
+    <div class="header">
+        <button class="back-btn" onclick="window.location.href='/'">
+            <i class="fa fa-arrow-left"></i> Trở về
+        </button>
+        <h1>HỒ SƠ</h1>
+        <button class="edit-btn" onclick="toggleEdit()">
+            <i class="fa fa-edit"></i> Chỉnh sửa
+        </button>
+    </div>
+
+    <div class="profile-content">
+        <div class="profile-info">
+            <div class="avatar-section">
+                <div class="avatar">
+                    <img src="{{ player.avatar or '/assets/caro_game/images/default-avatar.png' }}" alt="Avatar">
+                    <div class="avatar-overlay">
+                        <label for="avatar-upload" class="upload-btn">
+                            <i class="fa fa-camera"></i>
+                        </label>
+                        <input type="file" id="avatar-upload" hidden accept="image/*" onchange="updateAvatar(event)">
+                    </div>
+                </div>
+            </div>
+
+            <div class="user-details">
+                <div class="detail-row">
+                    <span class="label">Tên người dùng</span>
+                    <span class="value" id="username">{{ player.username }}</span>
+                    <input type="text" class="edit-input" value="{{ player.username }}" hidden>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Email</span>
+                    <span class="value" id="email">{{ player.email }}</span>
+                    <input type="email" class="edit-input" value="{{ player.email }}" hidden>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Ngày tham gia</span>
+                    <span class="value">{{ player.created_at|date }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-section">
+            <h2>Thống kê</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">{{ player.total_games }}</div>
+                    <div class="stat-label">Tổng trận</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ player.wins }}</div>
+                    <div class="stat-label">Thắng</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ player.losses }}</div>
+                    <div class="stat-label">Thua</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ "%.1f"|format(player.win_rate) }}%</div>
+                    <div class="stat-label">Tỉ lệ thắng</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="inventory-section">
+            <h2>Kho đồ</h2>
+            <div class="inventory-tabs">
+                <button class="tab-btn active" onclick="switchTab('skins')">Skin</button>
+                <button class="tab-btn" onclick="switchTab('skills')">Kỹ năng</button>
+            </div>
+
+            <div id="skins-content" class="tab-content active">
+                <div class="items-grid">
+                    {% for skin in player.skins %}
+                    <div class="item-card {{ 'active' if skin.is_active else '' }}">
+                        <img src="{{ skin.image_url }}" alt="{{ skin.name }}">
+                        <div class="item-name">{{ skin.name }}</div>
+                        {% if not skin.is_active %}
+                        <button class="use-btn" onclick="equipSkin('{{ skin.id }}')">Sử dụng</button>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div id="skills-content" class="tab-content">
+                <div class="items-grid">
+                    {% for skill in player.skills %}
+                    <div class="item-card {{ 'active' if skill.is_active else '' }}">
+                        <img src="{{ skill.image_url }}" alt="{{ skill.name }}">
+                        <div class="item-name">{{ skill.name }}</div>
+                        <div class="item-description">{{ skill.description }}</div>
+                        <button class="use-btn" onclick="toggleSkill('{{ skill.id }}')">
+                            {{ 'Hủy kích hoạt' if skill.is_active else 'Kích hoạt' }}
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block style %}
+<style>
+    .profile-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+        background: #f5f5f5;
+        min-height: 100vh;
+    }
+
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 3rem;
+    }
+
+    .header h1 {
+        font-size: 2.5rem;
+        color: #333;
+    }
+
+    .back-btn, .edit-btn {
+        padding: 0.8rem 1.5rem;
+        background: #333;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+
+    .edit-btn {
+        background: #2196F3;
+    }
+
+    .profile-content {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .profile-info {
+        display: flex;
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .avatar-section {
+        flex-shrink: 0;
+    }
+
+    .avatar {
+        position: relative;
+        width: 150px;
+        height: 150px;
+    }
+
+    .avatar img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .avatar-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .avatar:hover .avatar-overlay {
+        opacity: 1;
+    }
+
+    .upload-btn {
+        color: white;
+        font-size: 1.5rem;
+        cursor: pointer;
+    }
+
+    .user-details {
+        flex-grow: 1;
+    }
+
+    .detail-row {
+        display: flex;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        background: #f8f8f8;
+        border-radius: 8px;
+    }
+
+    .label {
+        width: 150px;
+        color: #666;
+    }
+
+    .value {
+        flex-grow: 1;
+        font-weight: bold;
+    }
+
+    .edit-input {
+        display: none;
+        flex-grow: 1;
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .stats-section {
+        margin-bottom: 3rem;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .stat-card {
+        background: #f8f8f8;
+        padding: 1.5rem;
+        border-radius: 10px;
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #2196F3;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        color: #666;
+    }
+
+    .inventory-section h2 {
+        margin-bottom: 1rem;
+    }
+
+    .inventory-tabs {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .tab-btn {
+        padding: 0.8rem 1.5rem;
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+
+    .tab-btn.active {
+        border-bottom-color: #2196F3;
+        color: #2196F3;
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    .items-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .item-card {
+        background: #f8f8f8;
+        padding: 1rem;
+        border-radius: 10px;
+        text-align: center;
+    }
+
+    .item-card.active {
+        border: 2px solid #4CAF50;
+    }
+
+    .item-card img {
+        width: 100%;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+    }
+
+    .item-name {
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+
+    .item-description {
+        font-size: 0.9rem;
+        color: #666;
+        margin-bottom: 0.5rem;
+    }
+
+    .use-btn {
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 5px;
+        cursor: pointer;
+        width: 100%;
+    }
+
+    @media (max-width: 768px) {
+        .profile-info {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block script %}
+<script>
+    let isEditing = false;
+
+    function toggleEdit() {
+        isEditing = !isEditing;
+        const editBtn = document.querySelector('.edit-btn');
+        const values = document.querySelectorAll('.value');
+        const inputs = document.querySelectorAll('.edit-input');
+
+        editBtn.innerHTML = isEditing ? 
+            '<i class="fa fa-save"></i> Lưu' : 
+            '<i class="fa fa-edit"></i> Chỉnh sửa';
+
+        if (isEditing) {
+            values.forEach(v => v.style.display = 'none');
+            inputs.forEach(i => i.style.display = 'block');
+        } else {
+            saveChanges();
+            values.forEach(v => v.style.display = 'block');
+            inputs.forEach(i => i.style.display = 'none');
+        }
+    }
+
+    function saveChanges() {
+        const username = document.querySelector('input[value="{{ player.username }}"]').value;
+        const email = document.querySelector('input[value="{{ player.email }}"]').value;
+
+        frappe.call({
+            method: 'caro_game.player.api.update_profile',
+            args: {
+                'username': username,
+                'email': email
+            },
+            callback: function(response) {
+                if (response.message) {
+                    document.getElementById('username').textContent = username;
+                    document.getElementById('email').textContent = email;
+                    frappe.show_alert({
+                        message: 'Cập nhật thông tin thành công!',
+                        indicator: 'green'
+                    });
+                }
+            }
+        });
+    }
+
+    function updateAvatar(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        frappe.call({
+            method: 'caro_game.player.api.update_avatar',
+            args: {
+                'file': formData
+            },
+            callback: function(response) {
+                if (response.message) {
+                    document.querySelector('.avatar img').src = response.message.avatar_url;
+                    frappe.show_alert({
+                        message: 'Cập nhật ảnh đại diện thành công!',
+                        indicator: 'green'
+                    });
+                }
+            }
+        });
+    }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+
+        document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+        document.getElementById(`${tab}-content`).classList.add('active');
+    }
+
+    function equipSkin(skinId) {
+        frappe.call({
+            method: 'caro_game.player.api.equip_skin',
+            args: {
+                'skin_id': skinId
+            },
+            callback: function(response) {
+                if (response.message) {
+                    // Refresh the page to show updated skin status
+                    window.location.reload();
+                }
+            }
+        });
+    }
+
+    function toggleSkill(skillId) {
+        frappe.call({
+            method: 'caro_game.player.api.toggle_skill',
+            args: {
+                'skill_id': skillId
+            },
+            callback: function(response) {
+                if (response.message) {
+                    // Refresh the page to show updated skill status
+                    window.location.reload();
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

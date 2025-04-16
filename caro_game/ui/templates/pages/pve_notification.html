@@ -1,0 +1,94 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Thông báo{% endblock %}
+
+{% block page_content %}
+<div class="notification-container">
+    <div class="notification-card">
+        <h2>Chơi với máy</h2>
+        <p>Bạn có chắc chắn muốn bắt đầu?</p>
+        <div class="button-group">
+            <button class="confirm-btn" onclick="startGame()">Xác nhận</button>
+            <button class="cancel-btn" onclick="window.location.href='/'">Hủy</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block style %}
+<style>
+    .notification-container {
+        width: 100%;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.5);
+    }
+
+    .notification-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        text-align: center;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .notification-card h2 {
+        font-size: 1.8rem;
+        margin-bottom: 1rem;
+        color: #333;
+    }
+
+    .notification-card p {
+        color: #666;
+        margin-bottom: 2rem;
+    }
+
+    .button-group {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+    }
+
+    .confirm-btn, .cancel-btn {
+        padding: 0.8rem 2rem;
+        border: none;
+        border-radius: 5px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    .confirm-btn:hover, .cancel-btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .confirm-btn {
+        background: #4CAF50;
+        color: white;
+    }
+
+    .cancel-btn {
+        background: #f44336;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block script %}
+<script>
+    function startGame() {
+        frappe.call({
+            method: 'caro_game.game.api.create_ai_game',
+            callback: function(response) {
+                if (response.message) {
+                    window.location.href = '/game?mode=pve&id=' + response.message.game_id;
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

@@ -11,9 +11,9 @@ Thành Viên:
 
 Trò chơi caro trực tuyến
 
-### Installation
+### Hướng dẫn cài đặt
 
-You can install this app using the [bench](https://github.com/frappe/bench) CLI:
+Bạn có thể cài đặt ứng dụng này bằng cách sử dụng [bench](https://github.com/frappe/bench) CLI:
 
 ```bash
 cd $PATH_TO_YOUR_BENCH
@@ -21,22 +21,22 @@ bench get-app $URL_OF_THIS_REPO --branch init_srv
 bench install-app caro_game
 ```
 
-### Contributing
+### Đóng góp
 
-This app uses `pre-commit` for code formatting and linting. Please [install pre-commit](https://pre-commit.com/#installation) and enable it for this repository:
+Ứng dụng này sử dụng `pre-commit` để định dạng và kiểm tra mã nguồn. Vui lòng [cài đặt pre-commit](https://pre-commit.com/#installation) và kích hoạt nó cho repository này:
 
 ```bash
 cd apps/caro_game
 pre-commit install
 ```
 
-Pre-commit is configured to use the following tools for checking and formatting your code:
+Pre-commit được cấu hình để sử dụng các công cụ sau để kiểm tra và định dạng mã nguồn của bạn:
 
 - ruff
 - eslint
 - prettier
 - pyupgrade
 
-### License
+### Giấy phép
 
 agpl-3.0

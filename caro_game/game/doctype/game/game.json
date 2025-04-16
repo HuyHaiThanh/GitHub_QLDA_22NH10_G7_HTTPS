@@ -18,7 +18,7 @@
    "fieldname": "player1_id",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Player 1",
+   "label": "Người chơi 1",
    "options": "Caro Player",
    "reqd": 1
   },
@@ -26,21 +26,21 @@
    "fieldname": "player2_id",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Player 2",
+   "label": "Người chơi 2",
    "options": "Caro Player"
   },
   {
    "fieldname": "winner_id",
    "fieldtype": "Link",
    "in_list_view": 0,
-   "label": "Winner",
+   "label": "Người chiến thắng",
    "options": "Caro Player"
   },
   {
    "fieldname": "room_code",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Room Code",
+   "label": "Mã phòng",
    "unique": 1
   },
   {
@@ -48,8 +48,8 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
-   "label": "Status",
-   "options": "Waiting\nIn Progress\nCompleted\nAbandoned",
+   "label": "Trạng thái",
+   "options": "Đang chờ\nĐang chơi\nĐã kết thúc\nĐã hủy",
    "reqd": 1
   },
   {
@@ -57,7 +57,7 @@
    "fieldname": "created_at",
    "fieldtype": "Datetime",
    "in_list_view": 0,
-   "label": "Created At",
+   "label": "Thời gian tạo",
    "read_only": 1
   }
  ],
