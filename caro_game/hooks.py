@@ -8,25 +8,72 @@ app_license = "agpl-3.0"
 # Apps
 # ------------------
 
-# required_apps = []
+# required_apps = ["frappe"]
 
-# Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "caro_game",
-# 		"logo": "/assets/caro_game/logo.png",
-# 		"title": "Web_caro",
-# 		"route": "/caro_game",
-# 		"has_permission": "caro_game.api.permission.has_app_permission"
-# 	}
-# ]
+# Desk Sections
+desk_sections = [
+    {
+        "label": "Caro Game",
+        "icon": "game-controller",
+        "index": 20,
+    }
+]
+
+# Desk Icons
+desk_icons = [
+    {
+        "module_name": "Game",
+        "label": "Game",
+        "icon": "octicon octicon-checklist",
+        "link": "game",
+        "type": "module",
+        "section": "Caro Game",
+        "idx": 1
+    },
+    {
+        "module_name": "Game_Core",
+        "label": "Game Core",
+        "icon": "octicon octicon-gear",
+        "link": "game_core",
+        "type": "module",
+        "section": "Caro Game",
+        "idx": 2
+    },
+    {
+        "module_name": "Authentication",
+        "label": "Authentication",
+        "icon": "octicon octicon-key",
+        "link": "authentication",
+        "type": "module",
+        "section": "Caro Game",
+        "idx": 3
+    },
+    {
+        "module_name": "Player",
+        "label": "Player",
+        "icon": "octicon octicon-person",
+        "link": "player",
+        "type": "module",
+        "section": "Caro Game",
+        "idx": 4
+    },
+    {
+        "module_name": "Analytics",
+        "label": "Analytics",
+        "icon": "octicon octicon-graph",
+        "link": "analytics",
+        "type": "module",
+        "section": "Caro Game",
+        "idx": 5
+    }
+]
 
 # Includes in <head>
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/caro_game/css/caro_game.css"
-# app_include_js = "/assets/caro_game/js/caro_game.js"
+app_include_css = "/assets/caro_game/css/caro_game.css"
+app_include_js = "/assets/caro_game/js/caro_game.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/caro_game/css/caro_game.css"
@@ -57,6 +104,7 @@ app_license = "agpl-3.0"
 # ----------
 
 # application home page (will override Website Settings)
+# Bỏ cấu hình này để sử dụng trang mặc định của Frappe
 # home_page = "login"
 
 # website user home page (by Role)
@@ -69,9 +117,6 @@ app_license = "agpl-3.0"
 
 # automatically create page for each record of this doctype
 # website_generators = ["Web Page"]
-
-# automatically load and sync documents of this doctype from downstream apps
-# importable_doctypes = [doctype_1]
 
 # Jinja
 # ----------
@@ -86,7 +131,7 @@ app_license = "agpl-3.0"
 # ------------
 
 # before_install = "caro_game.install.before_install"
-# after_install = "caro_game.install.after_install"
+after_install = "caro_game.setup.install.after_install"
 
 # Uninstallation
 # ------------
@@ -97,15 +142,12 @@ app_license = "agpl-3.0"
 # Integration Setup
 # ------------------
 # To set up dependencies/integrations with other apps
-# Name of the app being installed is passed as an argument
 
 # before_app_install = "caro_game.utils.before_app_install"
 # after_app_install = "caro_game.utils.after_app_install"
 
 # Integration Cleanup
 # -------------------
-# To clean up dependencies/integrations with other apps
-# Name of the app being uninstalled is passed as an argument
 
 # before_app_uninstall = "caro_game.utils.before_app_uninstall"
 # after_app_uninstall = "caro_game.utils.after_app_uninstall"
@@ -230,10 +272,24 @@ app_license = "agpl-3.0"
 # 	"caro_game.auth.validate"
 # ]
 
-# Automatically update python controller files with type annotations for this app.
-# export_python_type_annotations = True
+# Default is 1
+website_route_rules = [
+	{"from_route": "/game/<path:app_path>", "to_route": "game"},
+	{"from_route": "/authentication/<path:app_path>", "to_route": "authentication"},
+	{"from_route": "/game-core/<path:app_path>", "to_route": "game_core"},
+	{"from_route": "/player/<path:app_path>", "to_route": "player"},
+	{"from_route": "/analytics/<path:app_path>", "to_route": "analytics"},
+]
 
-# default_log_clearing_doctypes = {
-# 	"Logging DocType Name": 30  # days to retain logs
-# }
+# Workspaces
+# ----------------
+required_apps = ["frappe"]
+
+# Đăng ký các workspaces
+fixtures = [
+    {"dt": "Workspace", "filters": [["module", "in", ["Game", "Game_Core", "Authentication", "Player", "Analytics"]]]}
+]
+
+# Đăng ký các Module Defs
+modules = ["Game", "Game_Core", "Authentication", "Player", "Analytics", "UI", "AI"]
 

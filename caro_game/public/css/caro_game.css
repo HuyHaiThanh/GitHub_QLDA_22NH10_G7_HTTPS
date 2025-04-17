@@ -1,0 +1,59 @@
+/* CSS cho ứng dụng Caro Game */
+.caro-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.caro-header {
+    padding: 20px 0;
+    text-align: center;
+}
+
+.caro-board {
+    display: grid;
+    grid-template-columns: repeat(15, 1fr);
+    gap: 2px;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.caro-cell {
+    aspect-ratio: 1;
+    border: 1px solid #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.caro-cell:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.player-info {
+    display: flex;
+    justify-content: space-between;
+    margin: 20px auto;
+    max-width: 600px;
+}
+
+.player-card {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    width: 45%;
+}
+
+.active-player {
+    border-color: #4caf50;
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .caro-board {
+        max-width: 100%;
+    }
+}
