@@ -1,0 +1,353 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Kết thúc trận đấu{% endblock %}
+
+{% block page_content %}
+<div class="after-game-container">
+    <div class="result-card">
+        <div class="result-header">
+            <h2>{{ "Chiến thắng!" if game.winner_id == current_player else "Thua cuộc!" }}</h2>
+        </div>
+
+        <div class="players-info">
+            <div class="player-stats {{ 'winner' if game.winner_id == game.player1_id else '' }}">
+                <div class="avatar">
+                    <img src="{{ player1.avatar or '/assets/caro_game/images/default-avatar.png' }}" alt="{{ player1.username }}">
+                    <div class="player-mark">X</div>
+                </div>
+                <div class="player-details">
+                    <div class="username">{{ player1.username }}</div>
+                    <div class="stats">
+                        <span class="elo">{{ player1.elo }} ELO</span>
+                        <span class="change {{ 'positive' if game.winner_id == game.player1_id else 'negative' }}">
+                            {{ "+" if game.winner_id == game.player1_id else "-" }}{{ game.elo_change }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="vs">VS</div>
+
+            <div class="player-stats {{ 'winner' if game.winner_id == game.player2_id else '' }}">
+                <div class="avatar">
+                    <img src="{{ player2.avatar or '/assets/caro_game/images/default-avatar.png' }}" alt="{{ player2.username }}">
+                    <div class="player-mark">O</div>
+                </div>
+                <div class="player-details">
+                    <div class="username">{{ player2.username }}</div>
+                    <div class="stats">
+                        <span class="elo">{{ player2.elo }} ELO</span>
+                        <span class="change {{ 'positive' if game.winner_id == game.player2_id else 'negative' }}">
+                            {{ "+" if game.winner_id == game.player2_id else "-" }}{{ game.elo_change }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-stats">
+            <div class="stat-item">
+                <span class="label">Thời gian</span>
+                <span class="value">{{ game.duration }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="label">Số nước đi</span>
+                <span class="value">{{ game.total_moves }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="label">Kỹ năng sử dụng</span>
+                <span class="value">{{ game.skills_used }}</span>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="rematch-btn" onclick="requestRematch()">
+                <i class="fa fa-rotate-right"></i> Chơi lại
+            </button>
+            <button class="menu-btn" onclick="window.location.href='/'">
+                <i class="fa fa-home"></i> Về menu
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block style %}
+<style>
+    .after-game-container {
+        width: 100%;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #1a1a1a 0%, #303030 100%);
+        padding: 2rem;
+    }
+
+    .result-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        width: 90%;
+        max-width: 600px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .result-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .result-header h2 {
+        font-size: 2.5rem;
+        color: #333;
+        margin: 0;
+    }
+
+    .players-info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+    }
+
+    .player-stats {
+        text-align: center;
+        padding: 1rem;
+        border-radius: 15px;
+        transition: transform 0.3s;
+    }
+
+    .player-stats.winner {
+        background: rgba(76, 175, 80, 0.1);
+        transform: scale(1.05);
+    }
+
+    .avatar {
+        position: relative;
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 1rem;
+    }
+
+    .avatar img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .player-mark {
+        position: absolute;
+        bottom: -5px;
+        right: -5px;
+        width: 30px;
+        height: 30px;
+        background: #2196F3;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+
+    .player-stats:last-child .player-mark {
+        background: #FF5722;
+    }
+
+    .vs {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #666;
+    }
+
+    .username {
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .stats {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    .elo {
+        color: #666;
+    }
+
+    .change {
+        font-weight: bold;
+    }
+
+    .change.positive {
+        color: #4CAF50;
+    }
+
+    .change.negative {
+        color: #f44336;
+    }
+
+    .game-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin-bottom: 2rem;
+        padding: 1rem;
+        background: #f5f5f5;
+        border-radius: 10px;
+    }
+
+    .stat-item {
+        text-align: center;
+    }
+
+    .stat-item .label {
+        display: block;
+        color: #666;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-item .value {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .action-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+    }
+
+    .rematch-btn, .menu-btn {
+        padding: 1rem 2rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: transform 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .rematch-btn:hover, .menu-btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .rematch-btn {
+        background: #4CAF50;
+        color: white;
+    }
+
+    .menu-btn {
+        background: #f44336;
+        color: white;
+    }
+
+    @media (max-width: 768px) {
+        .players-info {
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .vs {
+            transform: rotate(90deg);
+        }
+
+        .game-stats {
+            grid-template-columns: 1fr;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+
+        .rematch-btn, .menu-btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block script %}
+<script>
+    function requestRematch() {
+        frappe.call({
+            method: 'caro_game.game.api.request_rematch',
+            args: {
+                game_id: '{{ game.name }}'
+            },
+            callback: function(response) {
+                if (response.message) {
+                    if (response.message.status === 'waiting') {
+                        frappe.show_alert({
+                            message: 'Đang chờ đối thủ chấp nhận...',
+                            indicator: 'blue'
+                        });
+                    } else if (response.message.new_game_id) {
+                        window.location.href = '/game?id=' + response.message.new_game_id;
+                    }
+                }
+            }
+        });
+    }
+
+    // Check for rematch response if current player lost
+    {% if game.winner_id != current_player %}
+    function checkRematchRequest() {
+        frappe.call({
+            method: 'caro_game.game.api.check_rematch_request',
+            args: {
+                game_id: '{{ game.name }}'
+            },
+            callback: function(response) {
+                if (response.message && response.message.has_request) {
+                    if (confirm('Đối thủ muốn chơi lại. Bạn có đồng ý không?')) {
+                        acceptRematch();
+                    } else {
+                        rejectRematch();
+                    }
+                }
+            }
+        });
+    }
+
+    function acceptRematch() {
+        frappe.call({
+            method: 'caro_game.game.api.accept_rematch',
+            args: {
+                game_id: '{{ game.name }}'
+            },
+            callback: function(response) {
+                if (response.message && response.message.new_game_id) {
+                    window.location.href = '/game?id=' + response.message.new_game_id;
+                }
+            }
+        });
+    }
+
+    function rejectRematch() {
+        frappe.call({
+            method: 'caro_game.game.api.reject_rematch',
+            args: {
+                game_id: '{{ game.name }}'
+            }
+        });
+    }
+
+    // Start checking for rematch requests
+    const checkInterval = setInterval(checkRematchRequest, 2000);
+
+    // Cleanup interval when leaving page
+    window.onbeforeunload = function() {
+        clearInterval(checkInterval);
+    };
+    {% endif %}
+</script>
+{% endblock %}

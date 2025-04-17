@@ -1,0 +1,238 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Tạo phòng mới{% endblock %}
+
+{% block page_content %}
+<div class="notification-container">
+    <div class="notification-card">
+        <h2>Tạo phòng mới</h2>
+        
+        <div class="room-info">
+            <div class="room-code">
+                <span id="room-code">{{ room_code }}</span>
+                <button onclick="copyRoomCode()">
+                    <i class="fa fa-copy"></i>
+                </button>
+            </div>
+
+            <div class="qr-code">
+                <img src="{{ qr_code_url }}" alt="QR Code">
+            </div>
+
+            <p class="instruction">Chia sẻ mã phòng hoặc mã QR với bạn bè để bắt đầu chơi</p>
+        </div>
+
+        <div class="waiting-status">
+            <div class="spinner"></div>
+            <p>Đang chờ người chơi khác tham gia...</p>
+        </div>
+
+        <div class="button-group">
+            <button class="start-btn" onclick="startGame()" disabled>Bắt đầu</button>
+            <button class="cancel-btn" onclick="cancelRoom()">Hủy</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block style %}
+<style>
+    .notification-container {
+        width: 100%;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.5);
+    }
+
+    .notification-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        text-align: center;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .notification-card h2 {
+        font-size: 1.8rem;
+        margin-bottom: 2rem;
+        color: #333;
+    }
+
+    .room-info {
+        margin-bottom: 2rem;
+    }
+
+    .room-code {
+        background: #f5f5f5;
+        padding: 1rem;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .room-code span {
+        font-size: 1.5rem;
+        font-weight: bold;
+        letter-spacing: 2px;
+    }
+
+    .room-code button {
+        background: none;
+        border: none;
+        color: #666;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 5px;
+        transition: background 0.2s;
+    }
+
+    .room-code button:hover {
+        background: #eee;
+    }
+
+    .qr-code {
+        margin-bottom: 1.5rem;
+    }
+
+    .qr-code img {
+        max-width: 200px;
+        border-radius: 10px;
+    }
+
+    .instruction {
+        color: #666;
+        margin-bottom: 1.5rem;
+    }
+
+    .waiting-status {
+        margin-bottom: 2rem;
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+        margin: 0 auto 1rem;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #2196F3;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .waiting-status p {
+        color: #666;
+    }
+
+    .button-group {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+    }
+
+    .start-btn, .cancel-btn {
+        padding: 0.8rem 2rem;
+        border: none;
+        border-radius: 5px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    .start-btn:hover:not(:disabled), .cancel-btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .start-btn {
+        background: #4CAF50;
+        color: white;
+    }
+
+    .start-btn:disabled {
+        background: #cccccc;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .cancel-btn {
+        background: #f44336;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block script %}
+<script>
+    let checkInterval;
+
+    function init() {
+        // Start checking for player join
+        checkInterval = setInterval(checkPlayerJoined, 2000);
+    }
+
+    function checkPlayerJoined() {
+        frappe.call({
+            method: 'caro_game.game.api.check_room_status',
+            args: {
+                room_code: '{{ room_code }}'
+            },
+            callback: function(response) {
+                if (response.message && response.message.player2_joined) {
+                    // Enable start button when player 2 joins
+                    document.querySelector('.start-btn').disabled = false;
+                    document.querySelector('.waiting-status').innerHTML = 
+                        '<p style="color: #4CAF50">Người chơi đã tham gia! Có thể bắt đầu.</p>';
+                    clearInterval(checkInterval);
+                }
+            }
+        });
+    }
+
+    function copyRoomCode() {
+        const roomCode = document.getElementById('room-code').textContent;
+        navigator.clipboard.writeText(roomCode);
+        frappe.show_alert({
+            message: 'Đã sao chép mã phòng!',
+            indicator: 'green'
+        });
+    }
+
+    function startGame() {
+        window.location.href = '/game?mode=pvp&room={{ room_code }}';
+    }
+
+    function cancelRoom() {
+        if (confirm('Bạn có chắc chắn muốn hủy phòng?')) {
+            frappe.call({
+                method: 'caro_game.game.api.cancel_room',
+                args: {
+                    room_code: '{{ room_code }}'
+                },
+                callback: function(response) {
+                    if (response.message) {
+                        window.location.href = '/';
+                    }
+                }
+            });
+        }
+    }
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', init);
+
+    // Cleanup interval when leaving page
+    window.onbeforeunload = function() {
+        clearInterval(checkInterval);
+    };
+</script>
+{% endblock %}

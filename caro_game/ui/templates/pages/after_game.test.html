@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kết thúc trận đấu</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <style>
+    /* Copy toàn bộ CSS từ block style */
+    .after-game-container {
+        width: 100%;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #1a1a1a 0%, #303030 100%);
+        padding: 2rem;
+    }
+    /* ...phần CSS còn lại... */
+    </style>
+</head>
+<body>
+    <div class="after-game-container">
+        <div class="result-card">
+            <div class="result-header">
+                <h2>Chiến thắng!</h2>
+            </div>
+
+            <div class="players-info">
+                <div class="player-stats winner">
+                    <div class="avatar">
+                        <img src="/assets/caro_game/images/default-avatar.png" alt="Player 1">
+                        <div class="player-mark">X</div>
+                    </div>
+                    <div class="player-details">
+                        <div class="username">Player 1</div>
+                        <div class="stats">
+                            <span class="elo">1500 ELO</span>
+                            <span class="change positive">+25</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="vs">VS</div>
+
+                <!-- Player 2 info tương tự -->
+            </div>
+
+            <!-- Game stats và buttons -->
+        </div>
+    </div>
+</body>
+</html>
