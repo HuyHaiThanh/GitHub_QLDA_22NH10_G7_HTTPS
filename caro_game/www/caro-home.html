@@ -1,0 +1,265 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Caro Game{% endblock %}
+
+{% block page_content %}
+<div class="home-container">
+    <div class="menu-section">
+        <div class="menu-title">
+            <h1>CARO GAME</h1>
+        </div>
+        
+        <div class="menu-buttons">
+            <button class="menu-btn pvp-btn" onclick="showPvPNotification()">
+                Chơi với người
+            </button>
+            <button class="menu-btn pve-btn" onclick="showPvENotification()">  
+                Chơi với máy
+            </button>
+            <button class="menu-btn ranking-btn" onclick="window.location.href='/caro-leaderboard'">
+                Bảng xếp hạng
+            </button>
+            <button class="menu-btn shop-btn" onclick="window.location.href='/caro-shop'">
+                Cửa hàng
+            </button>
+            <button class="menu-btn profile-btn" onclick="window.location.href='/caro-profile'">
+                Hồ sơ
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- PvP Modal -->
+<div id="pvpModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Tạo phòng mới</h2>
+            <span class="close" onclick="closeModal('pvpModal')">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="room-info">
+                <div class="room-code">
+                    <span id="roomCode">ABCD123</span>
+                    <button onclick="copyRoomCode()">Sao chép</button>
+                </div>
+                <div class="qr-code">
+                    <img src="/assets/caro_game/images/qr-code.png" alt="QR Code">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="start-btn" onclick="startGame('pvp')">Bắt đầu</button>
+                <button class="cancel-btn" onclick="closeModal('pvpModal')">Hủy</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PvE Modal -->
+<div id="pveModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Chơi với máy</h2>
+            <span class="close" onclick="closeModal('pveModal')">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>Bạn có chắc chắn muốn bắt đầu?</p>
+            <div class="modal-actions">
+                <button class="start-btn" onclick="startGame('pve')">Bắt đầu</button>
+                <button class="cancel-btn" onclick="closeModal('pveModal')">Hủy</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block style %}
+<style>
+    .home-container {
+        width: 100%;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: linear-gradient(135deg, #1a1a1a 0%, #303030 100%);
+    }
+
+    .menu-section {
+        width: 100%;
+        max-width: 500px;
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .menu-title h1 {
+        font-size: 3.5rem;
+        color: #fff;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        margin-bottom: 3rem;
+    }
+
+    .menu-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .menu-btn {
+        padding: 1rem 2rem;
+        font-size: 1.2rem;
+        border: none;
+        border-radius: 10px;
+        background: #4a4a4a;
+        color: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .menu-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+    .pvp-btn { background: #2196F3; }
+    .pve-btn { background: #4CAF50; }
+    .ranking-btn { background: #FFC107; }
+    .shop-btn { background: #9C27B0; }
+    .profile-btn { background: #FF5722; }
+
+    /* Modal Styles */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.7);
+        z-index: 1000;
+    }
+
+    .modal-content {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #fff;
+        padding: 2rem;
+        border-radius: 15px;
+        width: 90%;
+        max-width: 500px;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .close {
+        font-size: 2rem;
+        cursor: pointer;
+    }
+
+    .room-info {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .room-code {
+        background: #f5f5f5;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .qr-code img {
+        max-width: 200px;
+        margin: 1rem 0;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+    }
+
+    .start-btn, .cancel-btn {
+        padding: 0.8rem 2rem;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+
+    .start-btn {
+        background: #4CAF50;
+        color: white;
+    }
+
+    .cancel-btn {
+        background: #f44336;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block script %}
+<script>
+    function showPvPNotification() {
+        document.getElementById('pvpModal').style.display = 'block';
+    }
+
+    function showPvENotification() {
+        document.getElementById('pveModal').style.display = 'block';
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+
+    function copyRoomCode() {
+        const roomCode = document.getElementById('roomCode').textContent;
+        navigator.clipboard.writeText(roomCode);
+        frappe.show_alert({
+            message: 'Đã sao chép mã phòng!',
+            indicator: 'green'
+        });
+    }
+
+    function startGame(mode) {
+        if (mode === 'pve') {
+            // Tạo game mới với AI
+            frappe.call({
+                method: 'caro_game.game.api.create_ai_game',
+                callback: function(response) {
+                    if (response.message) {
+                        window.location.href = '/game?mode=pve&id=' + response.message.game_id;
+                    }
+                }
+            });
+        } else {
+            // Tạo phòng mới cho PvP
+            frappe.call({
+                method: 'caro_game.game.api.create_room',
+                callback: function(response) {
+                    if (response.message) {
+                        window.location.href = '/game?mode=pvp&room=' + response.message.room_code;
+                    }
+                }
+            });
+        }
+    }
+
+    // Đóng modal khi click bên ngoài
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = 'none';
+        }
+    }
+</script>
+{% endblock %}

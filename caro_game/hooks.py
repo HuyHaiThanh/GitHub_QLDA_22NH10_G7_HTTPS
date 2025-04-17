@@ -104,8 +104,7 @@ app_include_js = "/assets/caro_game/js/caro_game.js"
 # ----------
 
 # application home page (will override Website Settings)
-# Bỏ cấu hình này để sử dụng trang mặc định của Frappe
-# home_page = "login"
+# home_page = "caro-home"  # Comment lại để không ghi đè trang mặc định của Frappe
 
 # website user home page (by Role)
 # role_home_page = {
@@ -280,6 +279,11 @@ website_route_rules = [
 	{"from_route": "/player/<path:app_path>", "to_route": "player"},
 	{"from_route": "/analytics/<path:app_path>", "to_route": "analytics"},
 ]
+
+# Thêm cấu hình website cho các trang web
+# website_redirects = [
+#     {"source": "/", "target": "/home"}
+# ]
 
 # Workspaces
 # ----------------
