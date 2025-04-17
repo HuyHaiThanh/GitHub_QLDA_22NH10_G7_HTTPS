@@ -1,0 +1,61 @@
+{
+ "cards": [
+  {
+   "hidden": 0,
+   "label": "Game Management",
+   "links": [
+    {
+     "dependencies": "",
+     "description": "Manage game sessions",
+     "label": "Game",
+     "name": "Game",
+     "onboard": 0,
+     "type": "doctype"
+    },
+    {
+     "dependencies": "",
+     "description": "Manage game moves",
+     "label": "Move",
+     "name": "Move",
+     "onboard": 0,
+     "type": "doctype"
+    }
+   ]
+  }
+ ],
+ "charts": [],
+ "creation": "2025-04-17 20:00:00.000000",
+ "developer_mode_only": 0,
+ "disable_user_customization": 0,
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "extends_another_page": 0,
+ "hide_custom": 0,
+ "icon": "checklist",
+ "idx": 0,
+ "is_default": 0,
+ "is_standard": 1,
+ "label": "Game",
+ "links": [],
+ "modified": "2025-04-17 20:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Game",
+ "name": "Game",
+ "owner": "Administrator",
+ "pin_to_bottom": 0,
+ "pin_to_top": 0,
+ "shortcuts": [
+  {
+   "doc_view": "List",
+   "label": "All Games",
+   "link_to": "Game",
+   "type": "DocType"
+  },
+  {
+   "doc_view": "List",
+   "label": "All Moves",
+   "link_to": "Move",
+   "type": "DocType"
+  }
+ ]
+}

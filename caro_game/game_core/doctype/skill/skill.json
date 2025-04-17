@@ -45,7 +45,7 @@
  "links": [],
  "modified": "2025-04-15 11:40:00.000000",
  "modified_by": "Administrator",
- "module": "Core",
+ "module": "Game_Core",
  "name": "Skill",
  "naming_rule": "By fieldname",
  "owner": "Administrator",
