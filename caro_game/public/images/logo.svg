@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+  <circle cx="40" cy="40" r="38" fill="#14202e" stroke="#14cca8" stroke-width="2"/>
+  <text x="40" y="45" font-family="Arial" font-size="24" font-weight="bold" fill="#14cca8" text-anchor="middle">Caro</text>
+  <g fill="#14cca8" transform="translate(18, 15)">
+    <rect x="0" y="0" width="10" height="10" rx="1"/>
+    <rect x="15" y="0" width="10" height="10" rx="1"/>
+    <rect x="30" y="0" width="10" height="10" rx="1"/>
+    <rect x="0" y="15" width="10" height="10" rx="1"/>
+    <rect x="15" y="15" width="10" height="10" rx="1"/>
+    <rect x="30" y="15" width="10" height="10" rx="1"/>
+    <rect x="0" y="30" width="10" height="10" rx="1"/>
+    <rect x="15" y="30" width="10" height="10" rx="1"/>
+    <rect x="30" y="30" width="10" height="10" rx="1"/>
+  </g>
+</svg>

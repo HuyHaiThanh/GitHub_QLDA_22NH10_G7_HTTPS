@@ -8,7 +8,7 @@ app_license = "agpl-3.0"
 # Apps
 # ------------------
 
-# required_apps = ["frappe"]
+required_apps = ["frappe"]
 
 # Desk Sections
 desk_sections = [
@@ -76,8 +76,8 @@ app_include_css = "/assets/caro_game/css/caro_game.css"
 app_include_js = "/assets/caro_game/js/caro_game.js"
 
 # include js, css files in header of web template
-# web_include_css = "/assets/caro_game/css/caro_game.css"
-# web_include_js = "/assets/caro_game/js/caro_game.js"
+web_include_css = "/assets/caro_game/css/caro_game.css"
+web_include_js = "/assets/caro_game/js/caro_game.js"
 
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "caro_game/public/scss/website"
@@ -104,13 +104,14 @@ app_include_js = "/assets/caro_game/js/caro_game.js"
 # ----------
 
 # application home page (will override Website Settings)
-# Bỏ cấu hình này để sử dụng trang mặc định của Frappe
-# home_page = "login"
+home_page = "game"
 
 # website user home page (by Role)
-# role_home_page = {
-# 	"Role": "home_page"
-# }
+role_home_page = {
+   "Guest": "login",
+   "User": "game", 
+   "Administrator": "game"
+}
 
 # Generators
 # ----------
@@ -283,7 +284,6 @@ website_route_rules = [
 
 # Workspaces
 # ----------------
-required_apps = ["frappe"]
 
 # Đăng ký các workspaces
 fixtures = [
@@ -292,4 +292,21 @@ fixtures = [
 
 # Đăng ký các Module Defs
 modules = ["Game", "Game_Core", "Authentication", "Player", "Analytics", "UI", "AI"]
+
+# Website context overrides
+website_context = {
+    "top_bar_items": [
+        {"label": "Trang chủ", "url": "/", "right": 0},
+        {"label": "Hướng dẫn", "url": "/learn", "right": 0},
+        {"label": "Đăng nhập", "url": "/login", "right": 1, "hide_if_logged_in": 1},
+        {"label": "Đăng ký", "url": "/register", "right": 1, "hide_if_logged_in": 1},
+        {"label": "Trò chơi", "url": "/game", "right": 1, "hide_if_not_logged_in": 0},
+        {"label": "Xếp hạng", "url": "/leaderboard", "right": 1}
+    ],
+    "hide_login": 0,
+    "login_template": "templates/pages/login.html",
+    "login_window_title": "Đăng nhập - Caro Game",
+    "favicon": "/assets/caro_game/images/logo.svg",
+    "hide_sidebar": 1
+}
 

@@ -1,0 +1,15 @@
+{% extends "templates/web.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_content %}
+<div class="container py-5">
+    <div class="jumbotron">
+        <h1>{{ message }}</h1>
+        <p class="lead">Đây là trang kiểm tra đơn giản để xác nhận routing đang hoạt động.</p>
+        <hr class="my-4">
+        <p>Nếu bạn có thể thấy trang này, tức là Frappe có thể xử lý request URL và render template.</p>
+        <a class="btn btn-primary btn-lg" href="/game" role="button">Đi đến trang Game</a>
+    </div>
+</div>
+{% endblock %}
