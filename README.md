@@ -11,6 +11,61 @@ Thành Viên:
 
 Trò chơi caro trực tuyến
 
+## Website
+
+- Local development URL: http://caro.local:8000
+- Production URL: [Coming soon]
+
+## API Documentation
+
+### Game APIs
+
+1. **Get Game State**
+   - URL: `/api/method/caro_game.game.api.get_game_state`
+   - Method: GET
+   - Parameters: `game_id`
+   - Description: Lấy trạng thái hiện tại của trò chơi caro
+
+2. **Make Move**
+   - URL: `/api/method/caro_game.game.api.make_move`
+   - Method: POST
+   - Parameters: `game_id`, `row`, `col`
+   - Description: Thực hiện nước đi trên bàn cờ
+
+3. **Surrender Game**
+   - URL: `/api/method/caro_game.game.api.surrender_game`
+   - Method: POST
+   - Parameters: `game_id`
+   - Description: Đầu hàng trong trò chơi hiện tại
+
+4. **Propose Draw**
+   - URL: `/api/method/caro_game.game.api.propose_draw`
+   - Method: POST
+   - Parameters: `game_id`
+   - Description: Đề xuất hòa trận với đối thủ
+
+### Authentication APIs
+
+1. **Login**
+   - URL: `/api/method/caro_game.authentication.api.login`
+   - Method: POST
+   - Parameters: `usr`, `pwd`
+   - Description: Đăng nhập vào hệ thống
+
+2. **Register**
+   - URL: `/api/method/caro_game.authentication.api.register`
+   - Method: POST
+   - Parameters: `username`, `email`, `password`
+   - Description: Đăng ký tài khoản mới
+
+### AI APIs
+
+1. **Get AI Move**
+   - URL: `/api/method/caro_game.ai.api.get_ai_move`
+   - Method: POST
+   - Parameters: `game_id`, `difficulty`
+   - Description: Lấy nước đi tiếp theo từ AI dựa trên độ khó
+
 ### Installation
 
 You can install this app using the [bench](https://github.com/frappe/bench) CLI:
