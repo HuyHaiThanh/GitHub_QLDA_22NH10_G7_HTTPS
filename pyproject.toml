@@ -1,9 +1,9 @@
 [project]
 name = "caro_game"
 authors = [
-    { name = "My_team", email = "npthanh60@gmail.com"}
+    { name = "HuyB", email = "huyhaithanh51@gmail.com"}
 ]
-description = "Trò chơi caro trực tuyến"
+description = "An onlie Website caro game"
 requires-python = ">=3.10"
 readme = "README.md"
 dynamic = ["version"]

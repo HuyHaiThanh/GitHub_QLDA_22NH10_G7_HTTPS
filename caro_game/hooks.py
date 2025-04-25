@@ -1,83 +1,36 @@
 app_name = "caro_game"
-app_title = "Web_caro"
-app_publisher = "My_team"
-app_description = "Trò chơi caro trực tuyến"
-app_email = "npthanh60@gmail.com"
-app_license = "agpl-3.0"
+app_title = "Caro Game"
+app_publisher = "HuyB"
+app_description = "An onlie Website caro game"
+app_email = "huyhaithanh51@gmail.com"
+app_license = "mit"
 
 # Apps
 # ------------------
 
-required_apps = ["frappe"]
+# required_apps = []
 
-# Desk Sections
-desk_sections = [
-    {
-        "label": "Caro Game",
-        "icon": "game-controller",
-        "index": 20,
-    }
-]
-
-# Desk Icons
-desk_icons = [
-    {
-        "module_name": "Game",
-        "label": "Game",
-        "icon": "octicon octicon-checklist",
-        "link": "game",
-        "type": "module",
-        "section": "Caro Game",
-        "idx": 1
-    },
-    {
-        "module_name": "Game_Core",
-        "label": "Game Core",
-        "icon": "octicon octicon-gear",
-        "link": "game_core",
-        "type": "module",
-        "section": "Caro Game",
-        "idx": 2
-    },
-    {
-        "module_name": "Authentication",
-        "label": "Authentication",
-        "icon": "octicon octicon-key",
-        "link": "authentication",
-        "type": "module",
-        "section": "Caro Game",
-        "idx": 3
-    },
-    {
-        "module_name": "Player",
-        "label": "Player",
-        "icon": "octicon octicon-person",
-        "link": "player",
-        "type": "module",
-        "section": "Caro Game",
-        "idx": 4
-    },
-    {
-        "module_name": "Analytics",
-        "label": "Analytics",
-        "icon": "octicon octicon-graph",
-        "link": "analytics",
-        "type": "module",
-        "section": "Caro Game",
-        "idx": 5
-    }
-]
+# Each item in the list will be shown as an app in the apps page
+# add_to_apps_screen = [
+# 	{
+# 		"name": "caro_game",
+# 		"logo": "/assets/caro_game/logo.png",
+# 		"title": "Caro Game",
+# 		"route": "/caro_game",
+# 		"has_permission": "caro_game.api.permission.has_app_permission"
+# 	}
+# ]
 
 # Includes in <head>
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_css = "/assets/caro_game/css/caro_game.css"
-app_include_js = "/assets/caro_game/js/caro_game.js"
+# app_include_css = "/assets/caro_game/css/caro_game.css"
+# app_include_js = "/assets/caro_game/js/caro_game.js"
 
 # include js, css files in header of web template
-web_include_css = "/assets/caro_game/css/caro_game.css"
-web_include_js = "/assets/caro_game/js/caro_game.js"
+web_include_css = "/assets/caro_game/css/caro.css"
+web_include_js = "/assets/caro_game/js/caro.js"
 
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "caro_game/public/scss/website"
@@ -104,20 +57,21 @@ web_include_js = "/assets/caro_game/js/caro_game.js"
 # ----------
 
 # application home page (will override Website Settings)
-home_page = "game"
+# home_page = "login"
 
 # website user home page (by Role)
-role_home_page = {
-   "Guest": "login",
-   "User": "game", 
-   "Administrator": "game"
-}
+# role_home_page = {
+# 	"Role": "home_page"
+# }
 
 # Generators
 # ----------
 
 # automatically create page for each record of this doctype
 # website_generators = ["Web Page"]
+
+# automatically load and sync documents of this doctype from downstream apps
+# importable_doctypes = [doctype_1]
 
 # Jinja
 # ----------
@@ -132,7 +86,7 @@ role_home_page = {
 # ------------
 
 # before_install = "caro_game.install.before_install"
-after_install = "caro_game.setup.install.after_install"
+# after_install = "caro_game.install.after_install"
 
 # Uninstallation
 # ------------
@@ -143,12 +97,15 @@ after_install = "caro_game.setup.install.after_install"
 # Integration Setup
 # ------------------
 # To set up dependencies/integrations with other apps
+# Name of the app being installed is passed as an argument
 
 # before_app_install = "caro_game.utils.before_app_install"
 # after_app_install = "caro_game.utils.after_app_install"
 
 # Integration Cleanup
 # -------------------
+# To clean up dependencies/integrations with other apps
+# Name of the app being uninstalled is passed as an argument
 
 # before_app_uninstall = "caro_game.utils.before_app_uninstall"
 # after_app_uninstall = "caro_game.utils.after_app_uninstall"
@@ -273,40 +230,19 @@ after_install = "caro_game.setup.install.after_install"
 # 	"caro_game.auth.validate"
 # ]
 
-# Default is 1
+# Automatically update python controller files with type annotations for this app.
+# export_python_type_annotations = True
+
+# default_log_clearing_doctypes = {
+# 	"Logging DocType Name": 30  # days to retain logs
+# }
+
+# Website user home page
+# --------------------
 website_route_rules = [
-	{"from_route": "/game/<path:app_path>", "to_route": "game"},
-	{"from_route": "/authentication/<path:app_path>", "to_route": "authentication"},
-	{"from_route": "/game-core/<path:app_path>", "to_route": "game_core"},
-	{"from_route": "/player/<path:app_path>", "to_route": "player"},
-	{"from_route": "/analytics/<path:app_path>", "to_route": "analytics"},
+    {"from_route": "/caro", "to_route": "caro/index"},
 ]
 
-# Workspaces
-# ----------------
-
-# Đăng ký các workspaces
-fixtures = [
-    {"dt": "Workspace", "filters": [["module", "in", ["Game", "Game_Core", "Authentication", "Player", "Analytics"]]]}
-]
-
-# Đăng ký các Module Defs
-modules = ["Game", "Game_Core", "Authentication", "Player", "Analytics", "UI", "AI"]
-
-# Website context overrides
-website_context = {
-    "top_bar_items": [
-        {"label": "Trang chủ", "url": "/", "right": 0},
-        {"label": "Hướng dẫn", "url": "/learn", "right": 0},
-        {"label": "Đăng nhập", "url": "/login", "right": 1, "hide_if_logged_in": 1},
-        {"label": "Đăng ký", "url": "/register", "right": 1, "hide_if_logged_in": 1},
-        {"label": "Trò chơi", "url": "/game", "right": 1, "hide_if_not_logged_in": 0},
-        {"label": "Xếp hạng", "url": "/leaderboard", "right": 1}
-    ],
-    "hide_login": 0,
-    "login_template": "templates/pages/login.html",
-    "login_window_title": "Đăng nhập - Caro Game",
-    "favicon": "/assets/caro_game/images/logo.svg",
-    "hide_sidebar": 1
-}
+# allow guest to access caro game homepage without login
+website_guest_access = ["/caro", "/caro/index"]
 

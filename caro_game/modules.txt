@@ -1,7 +1,1 @@
-Game_Core
-Game
-Player
-Analytics
-Authentication
-UI
-AI
+Caro Game
