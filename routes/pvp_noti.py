@@ -63,7 +63,7 @@ def create_pvp_game():
 def join_pvp_game():
     user_id = request.cookies.get('user_id')
     if not user_id:
-        return redirect(url_for('home.enter_name'))
+        return redirect(url_for('home.enter_name', next=request.url))
 
     room_code = request.form.get('room_code')
     game = Game.query.filter_by(room_code=room_code, status='waiting').first()

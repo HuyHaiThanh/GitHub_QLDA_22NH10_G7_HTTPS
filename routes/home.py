@@ -209,8 +209,9 @@ def index():
 def enter_name():
     if request.method == 'POST':
         display_name = request.form.get('display_name')
+        next_url = request.form.get('next_url') # Lấy next_url từ form
         if not display_name:
-            return render_template('set_name.htm', error="Tên không được để trống!")
+            return render_template('set_name.htm', error="Tên không được để trống!", next_url=next_url)
 
         # Tạo ID ngẫu nhiên
         user_id = generate_user_id()
@@ -219,10 +220,15 @@ def enter_name():
         user = create_new_user(user_id, display_name)
 
         # Lưu vào cookie
-        response = make_response(redirect(url_for('home.index')))
+        if next_url:
+            response = make_response(redirect(next_url))
+        else:
+            response = make_response(redirect(url_for('home.index')))
         response.set_cookie('display_name', display_name, max_age=60*60*24*30)  # Lưu trong 30 ngày
         response.set_cookie('user_id', user_id, max_age=60*60*24*30)  # Lưu trong 30 ngày
         response.set_cookie('user_coins', '3000', max_age=60*60*24*30)  # Lưu số tiền mặc định
         return response
-
-    return render_template('set_name.htm')
+    
+    # GET request
+    next_url_param = request.args.get('next') # Lấy next từ query param cho GET request
+    return render_template('set_name.htm', next_url=next_url_param)

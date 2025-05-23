@@ -127,28 +127,41 @@ def replay(game_id):
         
         if opponent_request:
             # Both players ready, create new game
+            
+            # Determine who starts the new game (e.g., randomly or alternate)
+            # For simplicity, let's make player1 start, or you can make it random
+            first_player_id = random.choice([game.player1_id, game.player2_id])
+
             new_game = Game(
                 player1_id=game.player1_id,
                 player2_id=game.player2_id,
                 status='ongoing',
-                room_code=game.room_code
+                room_code=game.room_code, # Use the same room_code
+                current_player_id=first_player_id 
             )
             
             db.session.add(new_game)
             db.session.commit()
             
             # Delete replay requests
-            ReplayRequest.query.filter_by(game_id=game_id).delete()
+            ReplayRequest.query.filter_by(game_id=game_id).delete() # Delete for the old game_id
             db.session.commit()
             
-            # Notify both players
+            # Notify both players to redirect to the new game
             socketio.emit('game_restart', {
-                'game_id': new_game.game_id
-            }, room=f"game_{game.room_code}")
+                'new_game_id': new_game.game_id,
+                'room_code': new_game.room_code,
+                'current_player_id': new_game.current_player_id
+            }, room=f"game_{game.room_code}") # Emit to the old game room
             
-            # Store game_id in cookie
-            response = make_response(redirect(url_for('pvp.index')))
-            response.set_cookie('game_id', str(new_game.game_id), max_age=60*60*24)  # 24 hours
+            # The redirection will be handled by the client-side JavaScript upon receiving 'game_restart'
+            # So, the current player who initiated this (if both are ready) can just be returned a success
+            # or a redirect to the new game as well.
+            # For consistency, let the client handle the redirect.
+            # Return a simple response or redirect one of the players.
+            # Let's redirect the current user.
+            response = make_response(redirect(url_for('pvp.pvp_game', room_code=new_game.room_code)))
+            response.set_cookie('game_id', str(new_game.game_id), max_age=60*60*24)
             
             return response
         

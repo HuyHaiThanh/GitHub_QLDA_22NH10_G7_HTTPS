@@ -11,7 +11,7 @@ pvp_bp = Blueprint('pvp', __name__)
 def wait_for_opponent(room_code):
     user_id = request.cookies.get('user_id')
     if not user_id:
-        return redirect(url_for('home.enter_name'))
+        return redirect(url_for('home.enter_name', next=request.url))
     
     game = Game.query.filter_by(room_code=room_code, status='waiting').first()
     if not game:
@@ -31,36 +31,58 @@ def pvp_game(room_code): # Changed function name from index
     game_id_cookie = request.cookies.get('game_id')
     
     if not user_id:
-        return redirect(url_for('home.enter_name'))
+        return redirect(url_for('home.enter_name', next=request.url))
     
     game = Game.query.filter_by(room_code=room_code).first()
     if not game:
         return redirect(url_for('home.index', error='Game not found for this room code.'))
 
-    if game_id_cookie and str(game.game_id) != game_id_cookie:
-        return redirect(url_for('home.index', error='Game session mismatch.'))
-    
-    if str(game.player1_id) != user_id and (not game.player2_id or str(game.player2_id) != user_id):
-        return redirect(url_for('home.index', error='You are not a player in this game.'))
-
     user = User.query.get(user_id)
-    if not user:
-        return redirect(url_for('home.enter_name', error='User not found.'))
+    if not user: 
+        return redirect(url_for('home.enter_name', error='User not found.', next=request.url))
+
+    is_player1 = str(game.player1_id) == user_id
+    is_player2 = game.player2_id and str(game.player2_id) == user_id
+
+    if not is_player1 and not is_player2:
+        # User is not in the game, attempt to join as Player 2
+        if game.status == 'waiting' and not game.player2_id:
+            if str(game.player1_id) == user_id: 
+                 # This case should ideally not be hit if P1 is routed to wait_for_opponent correctly.
+                 # If P1 (creator) tries to access game URL directly while waiting for P2.
+                 return redirect(url_for('pvp.wait_for_opponent', room_code=room_code))
+            
+            game.player2_id = user_id
+            game.status = 'ongoing'
+            # current_player_id was set when P1 created the game.
+            # The client-side JS (pvp.htm) for P2 will emit 'join_pvp_room',
+            # which will then trigger 'opponent_joined' to P1.
+            db.session.commit()
+            is_player2 = True # User successfully joined as P2
+        else:
+            # Game is not joinable
+            return redirect(url_for('home.index', error='This game is not available to join.'))
+    
+    # If P1 accesses this page directly while game is still 'waiting' for P2
+    if is_player1 and game.status == 'waiting' and not game.player2_id:
+        return redirect(url_for('pvp.wait_for_opponent', room_code=room_code))
+
+    # If, after all checks, the user is not part of this game, redirect.
+    if not (is_player1 or is_player2):
+         return redirect(url_for('home.index', error='You are not authorized to participate in this game.'))
         
-    opponent_id = game.player2_id if str(game.player1_id) == user_id else game.player1_id
+    opponent_id = game.player2_id if is_player1 else game.player1_id
     opponent = User.query.get(opponent_id) if opponent_id else None
     
     moves = Move.query.filter_by(game_id=game.game_id).order_by(Move.move_order).all()
-    is_player1 = str(game.player1_id) == user_id
-    player1_obj_for_template = User.query.get(game.player1_id)
-    player2_obj_for_template = User.query.get(game.player2_id) if game.player2_id else None
     
-    print(f"[DEBUG pvp_game] Rendering pvp.htm for user: {user_id}")
-    print(f"[DEBUG pvp_game] Game ID: {game.game_id}, DB game.player1_id: {game.player1_id}, DB game.player2_id: {game.player2_id}")
-    print(f"[DEBUG pvp_game] Object player1 for template: {player1_obj_for_template.user_id if player1_obj_for_template else 'None'}")
-    print(f"[DEBUG pvp_game] Object player2 for template: {player2_obj_for_template.user_id if player2_obj_for_template else 'None'}")
-    print(f"[DEBUG pvp_game] is_player1 (current user is game.player1_id?): {is_player1}")
-    print(f"[DEBUG pvp_game] game.current_player_id: {game.current_player_id}")
+    player1_obj_for_template = User.query.get(game.player1_id)
+    # Player 2 might have just been set in this request if they joined
+    player2_obj_for_template = User.query.get(game.player2_id) if game.player2_id else None 
+    
+    # Debug prints from before can be removed or kept as needed
+    # print(f"[DEBUG pvp_game] Rendering pvp.htm for user: {user_id}")
+    # ... other prints
 
     response = make_response(render_template('pvp.htm', 
                                             user=user,
@@ -69,8 +91,9 @@ def pvp_game(room_code): # Changed function name from index
                                             opponent=opponent,
                                             game=game, 
                                             moves=moves,
-                                            is_player1=is_player1,
+                                            is_player1=is_player1, # Pass this updated variable
                                             room_code=game.room_code))
+    # Update cookie to this game's ID, useful if user was in another game before
     response.set_cookie('game_id', str(game.game_id), max_age=60*60*24)
     return response
 

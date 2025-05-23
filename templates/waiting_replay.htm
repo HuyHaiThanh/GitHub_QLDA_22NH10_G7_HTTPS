@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Đang chờ chơi lại - Caro Game</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background-color: #14202e;
+        color: white;
+        font-family: Arial, sans-serif;
+      }
+      .waiting-container {
+        text-align: center;
+        padding: 20px;
+        background-color: #1c2c40;
+        border-radius: 10px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+      }
+      .spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top: 4px solid #14cca8;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="waiting-container">
+      <h2>Đang chờ đối thủ đồng ý chơi lại...</h2>
+      <div class="spinner"></div>
+      <p>Phòng: {{ game.room_code }}</p>
+      <p>
+        <a
+          href="{{ url_for('after_game.leave_room', game_id=game.game_id) }}"
+          class="btn secondary-btn"
+          >Hủy và thoát</a
+        >
+      </p>
+    </div>
+
+    <script>
+      const socket = io();
+      const roomCode = "{{ game.room_code }}";
+      const gameId = "{{ game.game_id }}"; // Old game ID for context, if needed for leave
+
+      // It's important to join the specific game room to receive targeted messages
+      // However, 'game_restart' is emitted to f"game_{game.room_code}"
+      // which should be the same room the user was in.
+
+      socket.on("connect", () => {
+        console.log("Connected to SocketIO server from waiting_replay page.");
+        // No specific room join needed here if after_game.py emits to the general game room
+      });
+
+      socket.on("game_restart", function (data) {
+        console.log("Game restart event received", data);
+        if (data.room_code === roomCode) {
+          // Ensure it's for this room
+          // Store the new game_id in a cookie or local storage if your game page relies on it
+          document.cookie = `game_id=${data.new_game_id};path=/;max-age=${
+            60 * 60 * 24
+          }`; // 24 hours
+          window.location.href =
+            "{{ url_for('pvp.pvp_game', room_code='') }}" + data.room_code;
+        }
+      });
+
+      // Optional: Listen for opponent leaving if you want to update UI
+      socket.on("player_left", function (data) {
+        // Could redirect to home or show a message
+        console.log("Opponent left while waiting for replay");
+        // Example: window.location.href = "{{ url_for('home.index') }}";
+      });
+    </script>
+  </body>
+</html>
