@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cửa hàng - Caro Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .store-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .store-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        .store-header h1 {
+            font-size: 28px;
+            margin: 0;
+        }
+        
+        .coin-display {
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            background: #f0f0f0;
+            padding: 8px 15px;
+            border-radius: 20px;
+        }
+        
+        .coin-display img {
+            width: 20px;
+            height: 20px;
+            margin-left: 5px;
+        }
+        
+        .store-section {
+            margin-bottom: 40px;
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .store-section h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 22px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            color: #000000;
+        }
+        
+        .store-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .store-item {
+            background: #f9f9f9;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.2s;
+            border: 1px solid #eee;
+        }
+        
+        .store-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .store-item.owned {
+            border: 2px solid #4CAF50;
+        }
+        
+        .store-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: contain;
+            background: #fff;
+            padding: 10px;
+            display: block;
+        }
+        
+        .item-details {
+            padding: 15px;
+        }
+        
+        .item-details h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        
+        .item-price {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .price {
+            font-weight: bold;
+            color: #FF5722;
+            display: flex;
+            align-items: center;
+        }
+        
+        .price img {
+            width: 15px;
+            height: 15px;
+            margin-left: 5px;
+            padding: 0;
+        }
+        
+        .buy-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        
+        .buy-btn:hover {
+            background: #388E3C;
+        }
+        
+        .owned-label {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: #fff;
+            margin: 15% auto;
+            padding: 25px;
+            border-radius: 12px;
+            max-width: 400px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            position: relative;
+            text-align: center;
+            animation: modalFadeIn 0.3s;
+        }
+        
+        @keyframes modalFadeIn {
+            from {opacity: 0; transform: translateY(-20px);}
+            to {opacity: 1; transform: translateY(0);}
+        }
+        
+        .modal-title {
+            margin-top: 0;
+            color: #333;
+            font-size: 22px;
+            margin-bottom: 15px;
+        }
+        
+        .modal-message {
+            margin-bottom: 25px;
+            font-size: 16px;
+            line-height: 1.5;
+            color: #555;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .modal-btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        
+        .confirm-btn {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .confirm-btn:hover {
+            background: #3d9140;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .cancel-btn {
+            background: #f44336;
+            color: white;
+        }
+        
+        .cancel-btn:hover {
+            background: #e53935;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .modal-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="user-info">
+                <img src="{{ user.avatar or url_for('static', filename='images/default_avatar.png') }}" class="avatar">
+                <div class="user-details">
+                    <h3>{{ user.displayName }}</h3>
+                    <span class="coins">{{ user_coins }} <img src="{{ url_for('static', filename='images/coin.png') }}" alt="Coins"></span>
+                </div>
+            </div>
+            
+            <nav class="menu">
+                <a href="{{ url_for('home.index') }}" class="menu-item">
+                    <span class="icon">🏠</span>
+                    <span>Trang chủ</span>
+                </a>
+                <a href="{{ url_for('store.index') }}" class="menu-item active">
+                    <span class="icon">🎁</span>
+                    <span>Vật phẩm</span>
+                </a>
+                <a href="{{ url_for('profile.index') }}" class="menu-item">
+                    <span class="icon">👤</span>
+                    <span>Hồ sơ</span>
+                </a>
+            </nav>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="store-container">
+                <div class="store-header">
+                    <h1>Cửa hàng</h1>
+                    <div class="coin-display">
+                        {{ user_coins }} <img src="{{ url_for('static', filename='images/coin.png') }}" alt="Coins">
+                    </div>
+                </div>
+                
+                <!-- Avatars Section -->
+                <div class="store-section">
+                    <h2>Avatar</h2>
+                    <div class="store-grid">
+                        {% for avatar in avatars %}
+                        <div class="store-item {{ 'owned' if avatar.avatar_id in user_avatar_ids else '' }}">
+                            <img src="{{ avatar.image_url }}" alt="{{ avatar.name }}">
+                            <div class="item-details">
+                                <h3>{{ avatar.name }}</h3>
+                                <div class="item-price">
+                                    {% if avatar.avatar_id in user_avatar_ids %}
+                                    <span class="owned-label">Đã sở hữu</span>
+                                    {% else %}
+                                    <span class="price">{{ avatar.price }} <img src="{{ url_for('static', filename='images/coin.png') }}" alt="Coins"></span>
+                                    <button class="buy-btn" data-type="avatar" data-id="{{ avatar.avatar_id }}" data-price="{{ avatar.price }}" data-name="{{ avatar.name }}">Mua</button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Skins Section -->
+                <div class="store-section">
+                    <h2>Icon</h2>
+                    <div class="store-grid">
+                        {% for skin in skins %}
+                        <div class="store-item {{ 'owned' if skin.skin_id in user_skin_ids else '' }}">
+                            <img src="{{ skin.image_url }}" alt="{{ skin.name }}">
+                            <div class="item-details">
+                                <h3>{{ skin.name }}</h3>
+                                <div class="item-price">
+                                    {% if skin.skin_id in user_skin_ids %}
+                                    <span class="owned-label">Đã sở hữu</span>
+                                    {% else %}
+                                    <span class="price">{{ skin.price }} <img src="{{ url_for('static', filename='images/coin.png') }}" alt="Coins"></span>
+                                    <button class="buy-btn" data-type="skin" data-id="{{ skin.skin_id }}" data-price="{{ skin.price }}" data-name="{{ skin.name }}">Mua</button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notification Modal -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <h3 class="modal-title">Xác nhận mua hàng</h3>
+            <p id="modalMessage" class="modal-message"></p>
+            <div class="loading" id="loadingSpinner">
+                <div class="spinner"></div>
+                <p>Đang xử lý...</p>
+            </div>
+            <div class="modal-buttons">
+                <button id="cancelBtn" class="modal-btn cancel-btn">Không</button>
+                <button id="confirmBtn" class="modal-btn confirm-btn">Có</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Lấy tham chiếu đến các phần tử modal
+        const modal = document.getElementById('confirmModal');
+        const modalMessage = document.getElementById('modalMessage');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        
+        // Dữ liệu hiện tại của sản phẩm đang được mua
+        let currentItemData = null;
+        
+        // Cập nhật hiển thị coin
+        function updateCoinDisplay(newAmount) {
+            const coinDisplays = document.querySelectorAll('.coin-display, .coins');
+            coinDisplays.forEach(display => {
+                const imgTag = display.querySelector('img');
+                display.textContent = newAmount + ' ';
+                display.appendChild(imgTag);
+            });
+        }
+        
+        // Hàm mua hàng
+        function buyItem(type, id, button) {
+            // Hiển thị spinner loading
+            loadingSpinner.style.display = 'block';
+            confirmBtn.disabled = true;
+            cancelBtn.disabled = true;
+            
+            // Gửi yêu cầu mua hàng
+            fetch(`/buy_item/${type}/${id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Ẩn spinner loading
+                loadingSpinner.style.display = 'none';
+                
+                if (data.success) {
+                    // Cập nhật số tiền hiển thị nếu có
+                    if (data.coins !== undefined) {
+                        updateCoinDisplay(data.coins);
+                    }
+                    
+                    // Đánh dấu sản phẩm đã mua mà không tải lại trang
+                    const itemContainer = button.closest('.store-item');
+                    // Thêm class 'owned' cho container
+                    itemContainer.classList.add('owned');
+                    
+                    // Tìm phần tử giá tiền để thay đổi
+                    const priceContainer = button.closest('.item-price');
+                    
+                    // Xóa giá tiền và nút mua
+                    priceContainer.innerHTML = '<span class="owned-label">Đã sở hữu</span>';
+                    
+                    // Hiển thị thông báo thành công
+                    modalMessage.textContent = data.message || 'Mua hàng thành công!';
+                    
+                    // Đóng modal sau 1.5 giây
+                    setTimeout(() => {
+                        modal.style.display = 'none';
+                    }, 1500);
+                } else {
+                    // Thông báo lỗi
+                    modalMessage.textContent = data.message || 'Không thể mua. Vui lòng thử lại sau.';
+                    
+                    // Khôi phục các nút
+                    confirmBtn.disabled = false;
+                    cancelBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                
+                // Ẩn spinner loading và hiển thị lỗi
+                loadingSpinner.style.display = 'none';
+                modalMessage.textContent = 'Đã xảy ra lỗi. Vui lòng thử lại sau.';
+                
+                // Khôi phục các nút
+                confirmBtn.disabled = false;
+                cancelBtn.disabled = false;
+            });
+        }
+        
+        // Gán sự kiện cho tất cả nút mua
+        document.querySelectorAll('.buy-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const type = this.dataset.type;
+                const id = this.dataset.id;
+                const price = this.dataset.price;
+                const name = this.dataset.name;
+                
+                // Lưu trữ thông tin sản phẩm và nút hiện tại
+                currentItemData = { type, id, price, name, button: this };
+                
+                // Hiển thị thông báo xác nhận
+                modalMessage.textContent = `Bạn có muốn mua ${type === 'avatar' ? 'avatar' : 'icon'} "${name}" với giá ${price} coins không?`;
+                
+                // Hiển thị modal
+                modal.style.display = 'block';
+                
+                // Reset trạng thái spinner và nút
+                loadingSpinner.style.display = 'none';
+                confirmBtn.disabled = false;
+                cancelBtn.disabled = false;
+            });
+        });
+        
+        // Sự kiện khi nhấn nút "Không"
+        cancelBtn.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+        
+        // Sự kiện khi nhấn nút "Có"
+        confirmBtn.addEventListener('click', function() {
+            if (!currentItemData) return;
+            buyItem(currentItemData.type, currentItemData.id, currentItemData.button);
+        });
+        
+        // Khi người dùng nhấp vào bất kỳ đâu bên ngoài modal, đóng nó
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html> 
