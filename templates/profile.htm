@@ -154,36 +154,69 @@
             <div class="form-group">
               <label>Avatar đã mua</label>
               <div class="avatar-grid">
-                {% if user_avatars %}
-                <!-- Avatar mặc định -->
+                {# Hiển thị Avatar Mặc định từ DB (nếu tồn tại) #} {% if
+                default_avatar_db %}
                 <div
-                  class="avatar-item {% if user.avatar == '/static/images/default_avatar.png' %}active{% endif %}"
+                  class="avatar-item {% if user.avatar == default_avatar_db.image_url %}active{% endif %}"
+                  data-avatar-id="{{ default_avatar_db.avatar_id }}"
                 >
                   <img
-                    src="/static/images/default_avatar.png"
-                    alt="Avatar mặc định"
+                    src="{{ default_avatar_db.image_url }}"
+                    alt="{{ default_avatar_db.name }} (Mặc định)"
                   />
                   <input type="radio" name="selected_avatar" value="{{
-                  default_avatar_id }}" {% if user.avatar ==
-                  '/static/images/default_avatar.png' %}checked{% endif %}>
+                  default_avatar_db.avatar_id }}" {% if user.avatar ==
+                  default_avatar_db.image_url %}checked{% endif %}>
                 </div>
-
-                {% for avatar in user_avatars %} {% if avatar.image_url !=
-                '/static/images/default_avatar.png' %}
+                {% else %} {# Fallback RẤT KHÔNG MONG MUỐN nếu không có
+                default_avatar (price=0) trong DB #} {# Lúc này, người dùng
+                không thể chọn avatar mặc định một cách rõ ràng qua ID #}
                 <div
-                  class="avatar-item {% if user.avatar == avatar.image_url %}active{% endif %}"
+                  class="avatar-item {% if user.avatar == url_for('static', filename='images/default_avatar.png') %}active{% endif %}"
                 >
                   <img
-                    src="{{ avatar.image_url }}"
-                    alt="Avatar {{ avatar.avatar_id }}"
+                    src="{{ url_for('static', filename='images/default_avatar.png') }}"
+                    alt="Avatar Mặc định (Không tìm thấy trong DB)"
+                  />
+                  {# Không có input radio ở đây vì không có ID đáng tin cậy để
+                  submit #}
+                </div>
+                {% endif %} {# Lặp qua các avatar người dùng đã sở hữu
+                (UserAvatars), trừ avatar mặc định nếu nó tồn tại #} {% if
+                user_avatars %} {% for owned_avatar in user_avatars %} {# Điều
+                kiện: hiển thị nếu default_avatar_db không tồn tại HOẶC nếu
+                owned_avatar.avatar_id khác với default_avatar_db.avatar_id #}
+                {% if not default_avatar_db or (default_avatar_db and
+                owned_avatar.avatar_id != default_avatar_db.avatar_id) %}
+                <div
+                  class="avatar-item {% if user.avatar == owned_avatar.image_url %}active{% endif %}"
+                  data-avatar-id="{{ owned_avatar.avatar_id }}"
+                >
+                  <img
+                    src="{{ owned_avatar.image_url }}"
+                    alt="{{ owned_avatar.name }}"
                   />
                   <input type="radio" name="selected_avatar" value="{{
-                  avatar.avatar_id }}" {% if user.avatar == avatar.image_url
-                  %}checked{% endif %}>
+                  owned_avatar.avatar_id }}" {% if user.avatar ==
+                  owned_avatar.image_url %}checked{% endif %}>
                 </div>
-                {% endif %} {% endfor %} {% else %}
+                {% endif %} {% endfor %} {% endif %} {# Thông báo nếu không có
+                avatar nào để chọn (trường hợp user_avatars rỗng và
+                default_avatar_db cũng không có) #} {# Hoặc nếu user_avatars chỉ
+                chứa default_avatar mà thôi #} {% set non_default_owned_avatars
+                = [] %} {% if user_avatars and default_avatar_db %} {% for oa in
+                user_avatars %} {% if oa.avatar_id !=
+                default_avatar_db.avatar_id %} {% set _ =
+                non_default_owned_avatars.append(oa) %} {% endif %} {% endfor %}
+                {% elif user_avatars %} {% set non_default_owned_avatars =
+                user_avatars %} {% endif %} {% if not default_avatar_db and not
+                user_avatars %}
                 <p class="no-items">
-                  Bạn chưa mua avatar nào. Hãy đến
+                  Không có avatar nào để chọn. Vui lòng liên hệ quản trị viên.
+                </p>
+                {% elif non_default_owned_avatars|length == 0 %}
+                <p class="no-items">
+                  Bạn chưa mua thêm avatar nào. Hãy đến
                   <a href="{{ url_for('store.index') }}">Cửa hàng</a> để mua
                   avatar mới!
                 </p>
