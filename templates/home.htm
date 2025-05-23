@@ -5,9 +5,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Caro Game</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+      /* Thêm style cho flash messages */
+      .flash-messages {
+        list-style-type: none;
+        padding: 0;
+        margin: 0 0 15px 0;
+        position: fixed; /* Để hiển thị trên cùng */
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+        min-width: 250px; /* Độ rộng tối thiểu */
+      }
+      .flash-messages li {
+        padding: 10px 15px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        color: #fff;
+        opacity: 0.9;
+        transition: opacity 0.5s ease-out;
+      }
+      .flash-messages li.success {
+        background-color: #28a745;
+      }
+      .flash-messages li.error {
+        background-color: #dc3545;
+      }
+      .flash-messages li.info {
+        background-color: #17a2b8;
+      }
+      .flash-messages li.warning {
+        background-color: #ffc107;
+        color: #212529; /* Màu chữ cho warning */
+      }
+    </style>
 </head>
 <body>
     <div class="container">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flash-messages" id="server-flash-messages">
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        <ul class="flash-messages" id="client-flash-messages"></ul> <!-- For sessionStorage messages -->
+
         <!-- Sidebar -->
         <div class="sidebar">
             <div class="user-info">
@@ -167,5 +213,37 @@
     </div>
     
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+      // Hiển thị flash messages từ sessionStorage
+      document.addEventListener('DOMContentLoaded', (event) => {
+        const flashMessage = sessionStorage.getItem('flash_message');
+        const flashCategory = sessionStorage.getItem('flash_category') || 'info';
+        if (flashMessage) {
+            const clientFlashMessagesUl = document.getElementById('client-flash-messages');
+            if (clientFlashMessagesUl) {
+                const li = document.createElement('li');
+                li.className = flashCategory;
+                li.textContent = flashMessage;
+                clientFlashMessagesUl.appendChild(li);
+                // Tự động ẩn sau vài giây
+                setTimeout(() => {
+                    li.style.opacity = '0';
+                    setTimeout(() => { li.remove(); }, 500);
+                }, 5000); // 5 giây
+            }
+            sessionStorage.removeItem('flash_message');
+            sessionStorage.removeItem('flash_category');
+        }
+
+        // Tự động ẩn server-side flash messages
+        const serverFlashMessages = document.querySelectorAll('#server-flash-messages li');
+        serverFlashMessages.forEach(li => {
+            setTimeout(() => {
+                li.style.opacity = '0';
+                setTimeout(() => { li.remove(); }, 500);
+            }, 5000); // 5 giây
+        });
+      });
+    </script>
 </body>
 </html>

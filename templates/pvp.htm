@@ -9,6 +9,76 @@
       href="{{ url_for('static', filename='css/style.css') }}"
     />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+      .chat-input-area {
+        display: flex;
+        align-items: stretch; /* Làm cho các item cao bằng nhau */
+        margin-bottom: 5px;
+        width: 100%; /* Đảm bảo không vượt quá container cha */
+        box-sizing: border-box; /* Tính cả padding và border vào width */
+      }
+
+      #chat-input {
+        flex-grow: 1;
+        /* margin-right: 8px; /* Không còn nút send */
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1em;
+        box-sizing: border-box;
+      }
+
+      .icon-select-area {
+        /* margin-top: 5px; /* Không cần nếu chat-input-area đã có margin-bottom */
+        /* border-top: 1px solid #eee; /* Đường kẻ phân cách tùy chọn */
+        padding-top: 5px;
+      }
+
+      .icon-list {
+        display: flex;
+        flex-wrap: nowrap; /* Ngăn icon xuống dòng */
+        overflow-x: auto; /* Cho phép scroll ngang nếu nhiều icon */
+        padding-bottom: 5px; /* Để thanh scroll không che icon */
+        max-height: 40px; /* Giới hạn chiều cao của vùng icon */
+      }
+
+      .chat-icon {
+        width: 30px; /* Kích thước icon trong danh sách chọn */
+        height: 30px;
+        margin-right: 5px;
+        cursor: pointer;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        object-fit: contain; /* Đảm bảo icon hiển thị trọn vẹn */
+      }
+      .chat-icon:hover {
+        border-color: #ddd;
+        background-color: #f0f0f0;
+      }
+
+      .chat-icon-in-msg {
+        width: 24px; /* Kích thước icon trong tin nhắn */
+        height: 24px;
+        vertical-align: middle; /* Căn giữa icon với text */
+        margin: 0 2px; /* Khoảng cách nhỏ với text xung quanh */
+      }
+      .no-icons-notice {
+        font-size: 0.9em;
+        color: #888;
+        padding: 5px 0;
+        text-align: center;
+        width: 100%;
+      }
+      .flash-messages li.warning {
+        background-color: #ffc107;
+        color: #212529; /* Màu chữ cho warning */
+      }
+      .after-game-controls .btn.full-width {
+        width: 100%;
+        margin-left: 0; /* Remove margin if it's the only button */
+        margin-right: 0;
+      }
+    </style>
   </head>
   <body>
     <div class="game-container">
@@ -66,8 +136,15 @@
 
           <div class="chat-input-area">
             <input type="text" id="chat-input" placeholder="Viết tin nhắn..." />
-            <button id="emoji-btn">😊</button>
-            <button id="send-btn">📨</button>
+          </div>
+          <div class="icon-select-area">
+            <div class="icon-list" id="icon-list">
+              {% for icon in user_skins %}
+                <img src="{{ icon.image_url }}" class="chat-icon" data-icon-url="{{ icon.image_url }}" title="{{ icon.name }}" alt="{{ icon.name }}">
+              {% else %}
+                <p class="no-icons-notice">Bạn chưa sở hữu icon nào.</p>
+              {% endfor %}
+            </div>
           </div>
         </div>
       </div>
@@ -255,8 +332,16 @@
             }
         }
 
+        // Send icon message
+        function sendIcon(iconUrl) {
+            socket.emit('chat_message', {
+                room: roomCode,
+                icon_url: iconUrl
+            });
+        }
+
         // Add message to chat
-        function addMessage(sender, message, time) {
+        function addMessage(sender, message, time, iconUrl = null) {
             const chatMessages = document.getElementById('chat-messages');
             const messageElement = document.createElement('div');
             messageElement.className = 'chat-message';
@@ -265,9 +350,16 @@
             if (sender === userDisplayName) {
                 messageElement.classList.add('self');
             }
+            
+            let messageContentHtml = '';
+            if (iconUrl) {
+                messageContentHtml = `<img src="${iconUrl}" class="chat-icon-in-msg" alt="icon">`;
+            } else {
+                messageContentHtml = message;
+            }
 
             messageElement.innerHTML = `
-                <span class="message-content">${message}</span>
+                <span class="message-content">${messageContentHtml}</span>
                 <span class="message-time">${time}</span>
             `;
 
@@ -276,18 +368,32 @@
         }
 
         // Show game over screen
-        function showGameOver(winnerName, isCurrentUserWinner) {
+        function showGameOver(winnerName, isCurrentUserWinner, customReason = null) {
             const modal = document.getElementById('game-over-modal');
             const result = document.getElementById('game-result');
             const progressBar = document.getElementById('progress-bar');
             const winnerAvatar = document.getElementById('winner-avatar');
+            const playAgainBtn = document.getElementById('play-again-btn');
+            const leaveRoomBtn = document.getElementById('leave-room-btn'); // Get leave button
 
-            if (isCurrentUserWinner) {
+            playAgainBtn.disabled = false; // Re-enable button when modal shows
+            playAgainBtn.textContent = 'Chơi lại';
+
+            if (customReason) { // This implies someone gave up or another specific reason
+                result.textContent = customReason;
+                playAgainBtn.style.display = 'none'; // Hide play again button
+                // Optionally, adjust leave button styling if needed, e.g., make it more prominent
+                leaveRoomBtn.classList.add('full-width'); // Example: add a class to make it wider
+            } else if (isCurrentUserWinner) {
                 result.textContent = 'Bạn đã thắng!';
+                playAgainBtn.style.display = 'inline-block'; // Ensure play again is visible
+                leaveRoomBtn.classList.remove('full-width'); // Remove class if it was added
                 progressBar.style.width = '70%';
                 winnerAvatar.querySelector('img').src = "{{ url_for('static', filename='images/avatar_0.png' if is_player1 else 'avatar_1.png') }}";
             } else {
                 result.textContent = 'Bạn đã thua!';
+                playAgainBtn.style.display = 'inline-block'; // Ensure play again is visible
+                leaveRoomBtn.classList.remove('full-width'); // Remove class if it was added
                 progressBar.style.width = '30%';
                 winnerAvatar.querySelector('img').src = "{{ url_for('static', filename='images/avatar_1.png' if is_player1 else 'avatar_0.png') }}";
             }
@@ -297,12 +403,17 @@
 
         // Request replay
         function requestReplay() {
+            const playAgainBtn = document.getElementById('play-again-btn');
+            playAgainBtn.disabled = true; // Disable button after click
+            playAgainBtn.textContent = 'Đang chờ...';
+
             socket.emit('replay_request', {
-                room: roomCode
+                room: roomCode, // old room_code
+                game_id: game.id   // old game_id
             });
 
-            const result = document.getElementById('game-result');
-            result.textContent = 'Đang chờ đối thủ...';
+            // No longer changing game-result text here directly to "Đang chờ đối thủ..."
+            // It will be updated by 'opponent_wants_replay' or when the new game starts.
         }
 
         // Event listeners
@@ -313,11 +424,14 @@
 
         document.querySelector('.give-up-btn').addEventListener('click', () => {
             if (confirm('Bạn có chắc chắn muốn từ bỏ?')) {
-                window.location.href = "{{ url_for('home.index') }}";
+                // Instead of redirect, emit a socket event
+                socket.emit('player_gave_up', {
+                    room: roomCode,
+                    game_id: game.id
+                });
             }
         });
 
-        document.getElementById('send-btn').addEventListener('click', sendMessage);
         document.getElementById('chat-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 sendMessage();
@@ -327,7 +441,13 @@
         // Socket.IO events
         socket.on('status', (data) => {
             console.log('Status message:', data.msg);
-            addMessage("System", data.msg, new Date().toLocaleTimeString());
+            const now = new Date();
+            const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            addMessage("System", data.msg, timeString);
+        });
+        
+        socket.on('new_message', (data) => {
+            addMessage(data.sender, data.message, data.time, data.icon_url);
         });
 
         socket.on('move_made', (data) => {
@@ -347,8 +467,23 @@
             highlightCurrentPlayer(); // Xóa highlight lượt khi game over
             if (data.winner_id) {
                 const winnerName = String(data.winner_id) === String(userId) ? userDisplayName : (isPlayer1 ? "{{ player2.displayName if player2 else 'Opponent' }}" : "{{ player1.displayName }}");
-                showGameOver(winnerName, String(data.winner_id) === String(userId));
-            } else if (data.reason) {
+                // Check if game ended due to give up
+                if (data.gave_up_player_id) {
+                    if (String(userId) === String(data.winner_id)) {
+                        // Current user is the winner because opponent gave up
+                        showGameOver(winnerName, true, data.reason); // Pass reason to showGameOver
+                    } else if (String(userId) === String(data.gave_up_player_id)){
+                        // This client is the one who gave up. Server will send 'redirect_after_action'
+                        console.log("You gave up. Waiting for server to redirect.");
+                        // Modal might briefly show before redirect, so ensure play again is hidden for this user too
+                        const playAgainBtnOnGiveUp = document.getElementById('play-again-btn');
+                        if(playAgainBtnOnGiveUp) playAgainBtnOnGiveUp.style.display = 'none';
+                    }
+                } else {
+                    // Normal game over (win/loss by moves)
+                    showGameOver(winnerName, String(data.winner_id) === String(userId), data.reason);
+                }
+            } else if (data.reason) { // Game ended for other reasons (e.g., server error, draw if implemented)
                 alert("Trò chơi kết thúc: " + data.reason);
                 document.getElementById('game-result').textContent = "Trò chơi kết thúc: " + data.reason;
                 document.getElementById('game-over-modal').style.display = 'flex';
@@ -381,6 +516,48 @@
           highlightCurrentPlayer(); // Gọi khi đối thủ join và có current_player_id
           startOrResetTurnTimer();
       });
+
+        socket.on('force_redirect_home', (data) => {
+            console.log('Force redirect home:', data);
+            if (data.reason) {
+                // Store the message in sessionStorage to display on the home page after redirect
+                sessionStorage.setItem('flash_message', data.reason);
+                sessionStorage.setItem('flash_category', 'error'); // Assuming it's an error
+            }
+            window.location.href = "{{ url_for('home.index') }}";
+        });
+
+        socket.on('redirect_after_action', (data) => {
+            console.log('Redirect after action:', data);
+            if (data.message) {
+                sessionStorage.setItem('flash_message', data.message);
+                sessionStorage.setItem('flash_category', data.category || 'info');
+            }
+            if (data.redirect_url) {
+                window.location.href = data.redirect_url;
+            } else {
+                // Fallback to home if no specific URL is provided
+                window.location.href = "{{ url_for('home.index') }}";
+            }
+        });
+
+        socket.on('start_new_pvp_game', (data) => {
+            console.log('Received start_new_pvp_game with data:', data);
+            if (data.new_room_code) {
+                // Redirect to the new game room
+                window.location.href = `/pvp/game/${data.new_room_code}`;
+            }
+        });
+
+        socket.on('opponent_wants_replay', (data) => {
+            console.log('Opponent wants replay:', data);
+            const gameResultElement = document.getElementById('game-result');
+            if (gameResultElement) {
+                 gameResultElement.textContent = `${data.player_name || 'Đối thủ'} muốn chơi lại!`;
+            }
+            // Optionally, if current user hasn't clicked replay, keep their button active
+            // or change its text to "Đồng ý chơi lại"
+        });
 
         // New unified timer function
         function startOrResetTurnTimer() {
@@ -472,6 +649,13 @@
         console.log("Initial game state for UI highlight:", JSON.parse(JSON.stringify(game)));
         highlightCurrentPlayer(); // Gọi khi load game lần đầu
         startOrResetTurnTimer(); // Initial timer setup
+
+        // Add event listeners for icons
+        document.querySelectorAll('.chat-icon').forEach(icon => {
+            icon.addEventListener('click', function() {
+                sendIcon(this.dataset.iconUrl);
+            });
+        });
     </script>
   </body>
 </html>
