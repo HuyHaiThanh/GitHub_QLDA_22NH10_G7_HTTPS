@@ -140,9 +140,15 @@
           <div class="icon-select-area">
             <div class="icon-list" id="icon-list">
               {% for icon in user_skins %}
-                <img src="{{ icon.image_url }}" class="chat-icon" data-icon-url="{{ icon.image_url }}" title="{{ icon.name }}" alt="{{ icon.name }}">
+              <img
+                src="{{ icon.image_url }}"
+                class="chat-icon"
+                data-icon-url="{{ icon.image_url }}"
+                title="{{ icon.name }}"
+                alt="{{ icon.name }}"
+              />
               {% else %}
-                <p class="no-icons-notice">Bạn chưa sở hữu icon nào.</p>
+              <p class="no-icons-notice">Bạn chưa sở hữu icon nào.</p>
               {% endfor %}
             </div>
           </div>
@@ -350,7 +356,7 @@
             if (sender === userDisplayName) {
                 messageElement.classList.add('self');
             }
-            
+
             let messageContentHtml = '';
             if (iconUrl) {
                 messageContentHtml = `<img src="${iconUrl}" class="chat-icon-in-msg" alt="icon">`;
@@ -445,7 +451,7 @@
             const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
             addMessage("System", data.msg, timeString);
         });
-        
+
         socket.on('new_message', (data) => {
             addMessage(data.sender, data.message, data.time, data.icon_url);
         });
@@ -465,28 +471,14 @@
             clearInterval(turnTimerInterval); // Clear timer interval on game over
             console.log('Game Over:', data);
             highlightCurrentPlayer(); // Xóa highlight lượt khi game over
-            if (data.winner_id) {
-                const winnerName = String(data.winner_id) === String(userId) ? userDisplayName : (isPlayer1 ? "{{ player2.displayName if player2 else 'Opponent' }}" : "{{ player1.displayName }}");
-                // Check if game ended due to give up
-                if (data.gave_up_player_id) {
-                    if (String(userId) === String(data.winner_id)) {
-                        // Current user is the winner because opponent gave up
-                        showGameOver(winnerName, true, data.reason); // Pass reason to showGameOver
-                    } else if (String(userId) === String(data.gave_up_player_id)){
-                        // This client is the one who gave up. Server will send 'redirect_after_action'
-                        console.log("You gave up. Waiting for server to redirect.");
-                        // Modal might briefly show before redirect, so ensure play again is hidden for this user too
-                        const playAgainBtnOnGiveUp = document.getElementById('play-again-btn');
-                        if(playAgainBtnOnGiveUp) playAgainBtnOnGiveUp.style.display = 'none';
-                    }
-                } else {
-                    // Normal game over (win/loss by moves)
-                    showGameOver(winnerName, String(data.winner_id) === String(userId), data.reason);
-                }
-            } else if (data.reason) { // Game ended for other reasons (e.g., server error, draw if implemented)
-                alert("Trò chơi kết thúc: " + data.reason);
-                document.getElementById('game-result').textContent = "Trò chơi kết thúc: " + data.reason;
-                document.getElementById('game-over-modal').style.display = 'flex';
+
+            // Instead of showing a modal, redirect to the after_game page
+            if (game && game.id) {
+                window.location.href = `/after_game/${game.id}`;
+            } else {
+                console.error("Game ID not found, cannot redirect to after_game page.");
+                // Fallback: redirect to home or show a generic error
+                window.location.href = "{{ url_for('home.index') }}";
             }
         });
 

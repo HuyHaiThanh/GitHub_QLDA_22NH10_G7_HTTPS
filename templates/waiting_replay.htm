@@ -73,13 +73,11 @@
 
       socket.on("game_restart", function (data) {
         console.log("Game restart event received in waiting_replay", data);
-        if (data.room_code === roomCodeForNotifications) {
-          document.cookie = `game_id=${data.new_game_id};path=/;max-age=${
-            60 * 60 * 24
-          }`;
-          window.location.href =
-            "{{ url_for('pvp.pvp_game', room_code='') }}" + data.room_code;
-        }
+        document.cookie = `game_id=${data.new_game_id};path=/;max-age=${
+          60 * 60 * 24
+        }`;
+        window.location.href =
+          "{{ url_for('pvp.pvp_game', room_code='') }}" + data.room_code;
       });
 
       socket.on("player_left", function (data) {

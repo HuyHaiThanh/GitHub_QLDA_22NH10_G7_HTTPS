@@ -70,6 +70,14 @@
         border-color: #ff5050;
       }
 
+      .opponent-win h2 {
+        color: #ff5050; /* Red color for opponent win title */
+      }
+
+      .opponent-win .winner-avatar {
+        border-color: #ff5050; /* Red border for opponent avatar */
+      }
+
       .winner-avatar img {
         width: 100%;
         height: 100%;
@@ -122,15 +130,22 @@
         </div>
 
         <div class="result-info">
-          {% if game.winner_id == user.user_id %}
+          {% if game.status == 'cancelled' %}
+          <div class="cancelled-display">
+            <h2>Trò chơi đã kết thúc</h2>
+            <p>Trò chơi đã bị hủy</p>
+          </div>
+          {% elif game.winner_id == user.user_id %} {# User is the winner
+          (covers PvE and PvP if game.winner_id is set for PvP user win) #}
           <div class="winner-display">
             <h2>Chúc mừng!</h2>
             <div class="winner-avatar">
-              <img src="{{ user.avatar }}" alt="Avatar" />
+              <img src="{{ user.avatar }}" alt="Avatar của bạn" />
             </div>
             <p>Bạn đã chiến thắng!</p>
           </div>
-          {% elif game.winner_id is none and game.status == 'finished' %}
+          {% elif game.winner_id is none and game.status == 'finished' %} {# AI
+          is the winner (PvE context) #}
           <div class="winner-display ai-win">
             <h2>Rất tiếc!</h2>
             <div class="winner-avatar">
@@ -141,22 +156,43 @@
             </div>
             <p>AI đã chiến thắng!</p>
           </div>
-          {% elif game.status == 'cancelled' %}
-          <div class="cancelled-display">
-            <h2>Trò chơi đã kết thúc</h2>
-            <p>Trò chơi đã bị hủy</p>
-          </div>
-          {% else %}
+          {% elif winner %} {# 'winner' object exists, implies PvP game
+          concluded with a specific winner, not caught by game.winner_id #} {%
+          if winner.user_id == user.user_id %} {# PvP User Win, if 'winner'
+          object is primary and game.winner_id wasn't set #}
           <div class="winner-display">
-            <h2>Kết thúc trò chơi</h2>
-            {% if winner %}
+            <h2>Chúc mừng!</h2>
             <div class="winner-avatar">
-              <img src="{{ winner.avatar }}" alt="Winner Avatar" />
+              {# Use winner.avatar if available, fallback to user.avatar for
+              consistency #}
+              <img
+                src="{{ winner.avatar if winner.avatar else user.avatar }}"
+                alt="Avatar của bạn"
+              />
+            </div>
+            <p>Bạn đã chiến thắng!</p>
+          </div>
+          {% else %} {# PvP Opponent Win (winner.user_id != user.user_id) #}
+          <div class="winner-display opponent-win">
+            <h2>Rất tiếc!</h2>
+            <div class="winner-avatar">
+              <img
+                src="{{ winner.avatar if winner.avatar else url_for('static', filename='images/default_avatar.png') }}"
+                alt="Avatar đối thủ"
+              />
             </div>
             <p>{{ winner.displayName }} đã chiến thắng!</p>
-            {% else %}
-            <p>Trò chơi đã kết thúc</p>
-            {% endif %}
+          </div>
+          {% endif %} {% elif game.status == 'finished' %} {# Game is finished,
+          no game.winner_id, no AI win, no 'winner' object -> Draw #}
+          <div class="winner-display">
+            <h2>Trò chơi hòa</h2>
+            <p>Trận đấu kết thúc không có người thắng.</p>
+          </div>
+          {% else %} {# Fallback for any other unhandled scenario #}
+          <div class="winner-display">
+            <h2>Kết thúc trò chơi</h2>
+            <p>Trò chơi đã kết thúc.</p>
           </div>
           {% endif %}
         </div>
@@ -206,14 +242,14 @@
 
       socket.on("game_restart", function (data) {
         console.log("Game restart event received on after_game page", data);
-        if (data.room_code === currentRoomCodeForNotifications) {
-          // Ensure it's for this room
-          document.cookie = `game_id=${data.new_game_id};path=/;max-age=${
-            60 * 60 * 24
-          }`; // 24 hours
-          window.location.href =
-            "{{ url_for('pvp.pvp_game', room_code='') }}" + data.room_code;
-        }
+        // The client is in the old game's notification room.
+        // If it receives 'game_restart', it's for this client.
+        // data.room_code is the NEW room to join.
+        document.cookie = `game_id=${data.new_game_id};path=/;max-age=${
+          60 * 60 * 24
+        }`;
+        window.location.href =
+          "{{ url_for('pvp.pvp_game', room_code='') }}" + data.room_code;
       });
     </script>
   </body>

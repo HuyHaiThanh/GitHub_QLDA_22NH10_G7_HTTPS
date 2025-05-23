@@ -1,8 +1,9 @@
 from flask import Blueprint, render_template, redirect, url_for, request, make_response
-from models import User, Game, Move
+from models import User, Game, Move, ReplayRequest
 from app import db, socketio
 from flask_socketio import emit, join_room
 import random
+import string
 
 after_game_bp = Blueprint('after_game', __name__)
 
@@ -19,48 +20,44 @@ def on_join_after_game_notifications(data):
         print(f"[SocketIO join_after_game_notifications] User {user_id} not found.")
         return
 
-    # User joins the specific room_code to listen for 'game_restart' or 'player_left' events for that game
     join_room(room_code)
     print(f"User {user.displayName} (ID: {user_id}) joined notification room: {room_code} from after_game/waiting_replay page.")
-    # Optionally, emit a confirmation back to the specific client
-    # emit('joined_notification_room', {'room': room_code, 'status': 'success'}, room=request.sid)
+
+    game = Game.query.filter_by(room_code=room_code).first()
+    if game:
+        is_player_in_game = (game.player1_id and str(game.player1_id) == str(user_id)) or \
+                            (game.player2_id and str(game.player2_id) == str(user_id))
+        
+        if game.status == 'ongoing' and is_player_in_game:
+            print(f"Catch-up: Game {game.game_id} (room {room_code}) is 'ongoing'. Emitting game_restart to user {user_id} ({request.sid}).")
+            emit('game_restart', {
+                'new_game_id': game.game_id,
+                'room_code': game.room_code,
+                'current_player_id': game.current_player_id
+            }, room=request.sid)
 
 @after_game_bp.route('/after_game/<int:game_id>')
 def index(game_id):
-    # Check if user has cookies
     user_id = request.cookies.get('user_id')
-    
     if not user_id:
         return redirect(url_for('home.enter_name'))
-    
-    # Get game data
     game = Game.query.get(game_id)
     if not game:
         return redirect(url_for('home.index'))
-    
-    # Get user data
     user = User.query.get(user_id)
     if not user:
-        # Create user if not exists
         from routes.home import create_new_user
         display_name = request.cookies.get('display_name')
         user = create_new_user(user_id, display_name)
-    
-    # Get winner data
     winner = User.query.get(game.winner_id) if game.winner_id else None
-    
-    # Check if PVE or PVP
     is_pve = game.player2_id is None
-    
-    # Get opponent data for PVP
     opponent = None
-    if not is_pve:
-        opponent_id = game.player2_id if game.player1_id == user_id else game.player1_id
-        opponent = User.query.get(opponent_id)
-    
-    # Get moves count
+    if not is_pve and game.player1_id and game.player2_id:
+        current_user_is_player1 = str(game.player1_id) == str(user_id)
+        opponent_id = game.player2_id if current_user_is_player1 else game.player1_id
+        if opponent_id:
+            opponent = User.query.get(opponent_id)
     moves_count = Move.query.filter_by(game_id=game_id).count()
-    
     return render_template('after_game.htm', 
                           user=user, 
                           game=game, 
@@ -71,151 +68,87 @@ def index(game_id):
 
 @after_game_bp.route('/replay/<int:game_id>')
 def replay(game_id):
-    # Check if user has cookies
     user_id = request.cookies.get('user_id')
-    
     if not user_id:
         return redirect(url_for('home.enter_name'))
-    
-    # Get game data
-    game = Game.query.get(game_id)
-    if not game:
+    original_game = Game.query.get(game_id)
+    if not original_game:
         return redirect(url_for('home.index'))
-    
-    # Get user data
     user = User.query.get(user_id)
     if not user:
-        # Create user if not exists
         from routes.home import create_new_user
         display_name = request.cookies.get('display_name')
         user = create_new_user(user_id, display_name)
-    
-    # Check if PVE or PVP
-    is_pve = game.player2_id is None
-    
+    is_pve = original_game.player2_id is None
     if is_pve:
-        # For PVE, create a new game immediately
-        new_game = Game(
+        new_pve_game = Game(
             player1_id=user_id,
             player2_id=None,
             status='ongoing',
-            room_code=f"pve_{random.randint(100000, 999999)}"  # Generate new random room code
+            room_code=f"pve_{random.randint(100000, 999999)}"
         )
-        
-        db.session.add(new_game)
+        db.session.add(new_pve_game)
         db.session.commit()
-        
-        # Store game_id in cookie
         response = make_response(redirect(url_for('pve.index')))
-        response.set_cookie('game_id', str(new_game.game_id), max_age=60*60*24)  # 24 hours
-        
+        response.set_cookie('game_id', str(new_pve_game.game_id), max_age=60*60*24)
         return response
     else:
-        # For PVP, mark player as ready to replay
-        # We'll use a database table to track this instead of session
-        from models import ReplayRequest
-        
-        # Check if request already exists
+        if not original_game.player1_id or not original_game.player2_id:
+            return redirect(url_for('home.index'))
         existing_request = ReplayRequest.query.filter_by(
-            game_id=game_id,
+            game_id=original_game.game_id,
             player_id=user_id
         ).first()
-        
         if not existing_request:
-            # Create new request
             replay_request = ReplayRequest(
-                game_id=game_id,
+                game_id=original_game.game_id,
                 player_id=user_id
             )
             db.session.add(replay_request)
             db.session.commit()
-        
-        # Notify other player
         socketio.emit('replay_ready', {
             'player_id': user_id,
-            'game_id': game_id
-        }, room=f"game_{game.room_code}")
-        
-        # Check if both players are ready
-        opponent_id = game.player2_id if game.player1_id == user_id else game.player1_id
-        
+            'game_id': original_game.game_id,
+            'user_display_name': user.displayName
+        }, room=original_game.room_code)
+        opponent_id = original_game.player2_id if str(original_game.player1_id) == str(user_id) else original_game.player1_id
         opponent_request = ReplayRequest.query.filter_by(
-            game_id=game_id,
+            game_id=original_game.game_id,
             player_id=opponent_id
         ).first()
-        
         if opponent_request:
-            # Both players ready, create new game
-            
-            # Determine who starts the new game (e.g., randomly or alternate)
-            # For simplicity, let's make player1 start, or you can make it random
-            first_player_id = random.choice([game.player1_id, game.player2_id])
-
-            new_game = Game(
-                player1_id=game.player1_id,
-                player2_id=game.player2_id,
-                status='ongoing',
-                room_code=game.room_code, # Use the same room_code
-                current_player_id=first_player_id 
-            )
-            
-            db.session.add(new_game)
+            Move.query.filter_by(game_id=original_game.game_id).delete()
+            original_game.status = 'ongoing'
+            original_game.winner_id = None
+            original_game.current_player_id = random.choice([original_game.player1_id, original_game.player2_id])
+            ReplayRequest.query.filter_by(game_id=original_game.game_id).delete()
             db.session.commit()
-            
-            # Delete replay requests
-            ReplayRequest.query.filter_by(game_id=game_id).delete() # Delete for the old game_id
-            db.session.commit()
-            
-            # Notify both players to redirect to the new game
+            print(f"Game {original_game.game_id} (Room: {original_game.room_code}) reset for replay. Current player: {original_game.current_player_id}")
             socketio.emit('game_restart', {
-                'new_game_id': new_game.game_id,
-                'room_code': new_game.room_code,
-                'current_player_id': new_game.current_player_id
-            }, room=game.room_code) # Emit to the game_room_code directly
-            
-            # The redirection will be handled by the client-side JavaScript upon receiving 'game_restart'
-            # So, the current player who initiated this (if both are ready) can just be returned a success
-            # or a redirect to the new game as well.
-            # For consistency, let the client handle the redirect.
-            # Return a simple response or redirect one of the players.
-            # Let's redirect the current user.
-            response = make_response(redirect(url_for('pvp.pvp_game', room_code=new_game.room_code)))
-            response.set_cookie('game_id', str(new_game.game_id), max_age=60*60*24)
-            
+                'new_game_id': original_game.game_id,
+                'room_code': original_game.room_code,
+                'current_player_id': original_game.current_player_id
+            }, room=original_game.room_code)
+            response = make_response(redirect(url_for('pvp.pvp_game', room_code=original_game.room_code)))
+            response.set_cookie('game_id', str(original_game.game_id), max_age=60*60*24)
             return response
-        
-        # Wait for other player
-        return render_template('waiting_replay.htm', game=game, user=user)
+        return render_template('waiting_replay.htm', game=original_game, user=user)
 
 @after_game_bp.route('/leave_room/<int:game_id>')
 def leave_room(game_id):
-    # Check if user has cookies
     user_id = request.cookies.get('user_id')
-    
     if not user_id:
         return redirect(url_for('home.enter_name'))
-    
-    # Get game data
     game = Game.query.get(game_id)
     if not game:
         return redirect(url_for('home.index'))
-    
-    # Delete any replay requests
-    from models import ReplayRequest
-    ReplayRequest.query.filter_by(
-        game_id=game_id,
-        player_id=user_id
-    ).delete()
+    ReplayRequest.query.filter_by(game_id=game_id).delete()
     db.session.commit()
-    
-    # Notify other player if PVP
     if game.player2_id:
         socketio.emit('player_left', {
-            'player_id': user_id
-        }, room=f"game_{game.room_code}")
-    
-    # Clear game_id cookie
+            'player_id': user_id,
+            'message': f"Đối thủ đã rời khỏi phòng chờ chơi lại."
+        }, room=game.room_code)
     response = make_response(redirect(url_for('home.index')))
     response.delete_cookie('game_id')
-    
     return response
