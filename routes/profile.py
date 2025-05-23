@@ -55,7 +55,7 @@ def index():
     # Lấy số tiền từ cookie
     user_coins = request.cookies.get('user_coins', '3000')
     
-    return render_template(
+    response = make_response(render_template(
         'profile.htm', 
         user=user,
         user_avatars=user_avatars,
@@ -64,7 +64,28 @@ def index():
         available_skins=available_skins,
         user_coins=user_coins,
         default_avatar_id=default_avatar_id
-    )
+    ))
+
+    # Đồng bộ cookie user_avatar
+    current_cookie_avatar = request.cookies.get('user_avatar')
+    db_user_avatar_url = user.avatar
+    # default_avatar đã được query ở trên
+    static_default_url = url_for('static', filename='images/default_avatar.png')
+
+    new_cookie_value = None
+    if db_user_avatar_url:
+        new_cookie_value = db_user_avatar_url
+    elif default_avatar: # Sử dụng default_avatar đã query
+        new_cookie_value = default_avatar.image_url
+    else:
+        new_cookie_value = static_default_url
+
+    if new_cookie_value and current_cookie_avatar != new_cookie_value:
+        response.set_cookie('user_avatar', new_cookie_value, max_age=60*60*24*30)
+    elif not current_cookie_avatar and new_cookie_value: # Cookie chưa từng được set
+        response.set_cookie('user_avatar', new_cookie_value, max_age=60*60*24*30)
+
+    return response
 
 @profile_bp.route('/update_profile', methods=['POST'])
 def update_profile():

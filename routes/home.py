@@ -16,25 +16,32 @@ def create_new_user(user_id, display_name):
     user = User.query.get(user_id)
     if not user:
         user = User(user_id=user_id, displayName=display_name)
-        # Gán avatar và skin mặc định nếu cần
-        default_avatar = Avatar.query.filter_by(name='Default Avatar').first()
-        default_skin = Skin.query.filter_by(name='Default Skin').first()
-        if default_avatar:
-            user.avatar_id = default_avatar.avatar_id
-            user.avatar = default_avatar.image_url 
-        if default_skin:
-            user.skin_id = default_skin.skin_id
-            user.skin = default_skin.image_url
-        db.session.add(user)
-        db.session.commit()
+        
+        # Tìm avatar mặc định (price=0)
+        default_avatar_instance = Avatar.query.filter_by(price=0).first()
 
-        # Thêm vào bảng UserAvatar và UserSkin (nếu có avatar/skin mặc định)
-        if default_avatar:
-            user_avatar = UserAvatar(user_id=user.user_id, avatar_id=default_avatar.avatar_id)
-            db.session.add(user_avatar)
-        if default_skin:
-            user_skin = UserSkin(user_id=user.user_id, skin_id=default_skin.skin_id)
-            db.session.add(user_skin)
+        if default_avatar_instance:
+            user.avatar = default_avatar_instance.image_url
+        # Nếu không có default_avatar_instance, user.avatar sẽ là None, template sẽ dùng fallback tĩnh.
+            
+        db.session.add(user)
+        # Commit user trước để có user.user_id cho UserAvatar
+        # Hoặc commit một lần cuối, SQLAlchemy thường xử lý được. Để an toàn, commit sớm hơn nếu cần.
+
+        if default_avatar_instance:
+            # Đảm bảo người dùng "sở hữu" avatar mặc định
+            existing_user_avatar = UserAvatar.query.filter_by(user_id=user.user_id, avatar_id=default_avatar_instance.avatar_id).first()
+            if not existing_user_avatar:
+                user_avatar_entry = UserAvatar(user_id=user.user_id, avatar_id=default_avatar_instance.avatar_id)
+                db.session.add(user_avatar_entry)
+        
+        # Tạm thời bỏ qua skin vì User model không có trường skin trực tiếp
+        # default_skin = Skin.query.filter_by(name='Default Skin').first() # Hoặc price=0
+        # if default_skin:
+        #     # user.skin = default_skin.image_url # User model không có trường này
+        #     user_skin_entry = UserSkin(user_id=user.user_id, skin_id=default_skin.skin_id)
+        #     db.session.add(user_skin_entry)
+
         db.session.commit()
     return user
 
@@ -69,7 +76,7 @@ def index():
         leaderboard.append({
             "user": {
                 "username": user_data.displayName,
-                "avatar": user_data.avatar or "/static/images/default_avatar.png"
+                "avatar": user_data.avatar or url_for('static', filename='images/default_avatar.png')
             },
             "wins": leaderboard_entry.wins
         })
@@ -77,133 +84,63 @@ def index():
     # Tạo dữ liệu giả cho leaderboard nếu không có dữ liệu từ database
     if not leaderboard:
         leaderboard = [
-            {
-                "user": {
-                    "username": "Nguyễn Văn A",
-                    "avatar": "/static/images/avatar1.png"
-                },
-                "wins": 48
-            },
-            {
-                "user": {
-                    "username": "Trần Thị B",
-                    "avatar": "/static/images/avatar2.png"
-                },
-                "wins": 36
-            },
-            {
-                "user": {
-                    "username": "Lê Văn C",
-                    "avatar": "/static/images/default_avatar.png"
-                },
-                "wins": 29
-            },
-            {
-                "user": {
-                    "username": "Phạm Thị D",
-                    "avatar": "/static/images/avatar1.png"
-                },
-                "wins": 21
-            },
-            {
-                "user": {
-                    "username": "Hoàng Văn E",
-                    "avatar": "/static/images/avatar2.png"
-                },
-                "wins": 15
-            }
+            {"user": {"username": "Nguyễn Văn A", "avatar": "/static/images/avatar1.png"}, "wins": 48},
+            {"user": {"username": "Trần Thị B", "avatar": "/static/images/avatar2.png"}, "wins": 36},
+            {"user": {"username": "Lê Văn C", "avatar": "/static/images/default_avatar.png"}, "wins": 29},
+            {"user": {"username": "Phạm Thị D", "avatar": "/static/images/avatar1.png"}, "wins": 21},
+            {"user": {"username": "Hoàng Văn E", "avatar": "/static/images/avatar2.png"}, "wins": 15}
         ]
     
-    # Lấy dữ liệu icon và avatar từ cơ sở dữ liệu
-    all_icons = Skin.query.all()
-    all_avatars = Avatar.query.all()
+    # Lấy tất cả Avatars và Skins từ DB cho Store Preview
+    all_db_avatars = Avatar.query.all()
+    all_db_skins = Skin.query.all()
+
+    # Chuẩn bị AVATARS cho Store Preview (chỉ lấy item có giá > 0, không fallback tĩnh)
+    avatars_for_store = [av for av in all_db_avatars if av.price > 0]
     
-    # Lọc avatar và loại bỏ trùng lặp
-    avatars = []
-    added_urls = set()
-    
-    # Tìm avatar1, avatar2, avatar3 (không lấy default_avatar)
-    for avatar in all_avatars:
-        if avatar.image_url in added_urls:
-            continue  # Bỏ qua nếu URL này đã được thêm
-            
-        if "avatar1.png" in avatar.image_url or "avatar2.png" in avatar.image_url or "avatar3.png" in avatar.image_url:
-            avatars.append(avatar)
-            added_urls.add(avatar.image_url)
-    
-    # Lọc skin và loại bỏ trùng lặp
-    icons = []
-    added_urls = set()  # Reset lại set cho skin
-    
-    # Tìm icon1, icon2 (không lấy default_icon)
-    for skin in all_icons:
-        if skin.image_url in added_urls:
-            continue  # Bỏ qua nếu URL này đã được thêm
-            
-        if "icon1.png" in skin.image_url or "icon2.png" in skin.image_url:
-            icons.append(skin)
-            added_urls.add(skin.image_url)
-    
-    # Tạo dữ liệu giả cho icons và avatars nếu không có dữ liệu từ database
-    if not icons:
-        icons = [
-            {
-                "skin_id": 1,
-                "name": "Icon 1",
-                "image_url": "/static/images/icon1.png",
-                "price": 100
-            },
-            {
-                "skin_id": 2,
-                "name": "Icon 2", 
-                "image_url": "/static/images/icon2.png",
-                "price": 200
-            }
-        ]
-    
-    if not avatars:
-        avatars = [
-            {
-                "avatar_id": 1,
-                "name": "Avatar 1",
-                "image_url": "/static/images/avatar1.png",
-                "price": 300
-            },
-            {
-                "avatar_id": 2,
-                "name": "Avatar 2",
-                "image_url": "/static/images/avatar2.png",
-                "price": 400
-            },
-            {
-                "avatar_id": 3,
-                "name": "Avatar 3",
-                "image_url": "/static/images/avatar3.png",
-                "price": 500
-            }
-        ]
+    # Chuẩn bị SKINS (ICONS) cho Store Preview (chỉ lấy item có giá > 0, không fallback tĩnh)
+    icons_for_store = [s for s in all_db_skins if s.price > 0]
 
     # Lấy danh sách vật phẩm đã sở hữu từ database
-    user_avatars = UserAvatar.query.filter_by(user_id=user_id).all()
-    user_skins = UserSkin.query.filter_by(user_id=user_id).all()
+    user_avatar_entries = UserAvatar.query.filter_by(user_id=user_id).all()
+    user_skin_entries = UserSkin.query.filter_by(user_id=user_id).all()
     
-    # Chuyển đổi thành danh sách các ID
-    user_avatar_ids = [user_avatar.avatar_id for user_avatar in user_avatars]
-    user_skin_ids = [user_skin.skin_id for user_skin in user_skins]
+    user_avatar_ids = [ua.avatar_id for ua in user_avatar_entries]
+    user_skin_ids = [us.skin_id for us in user_skin_entries]
     
-    # Lấy số tiền từ cookie
     user_coins = request.cookies.get('user_coins', '3000')
 
-    return render_template('home.htm', 
+    response = make_response(render_template('home.htm', 
                            leaderboard=leaderboard, 
-                           icons=icons, 
-                           avatars=avatars, 
+                           icons=icons_for_store,
+                           avatars=avatars_for_store,
                            username=display_name, 
                            user_id=user_id,
                            user=user,
                            user_avatar_ids=user_avatar_ids,
                            user_skin_ids=user_skin_ids,
-                           user_coins=user_coins)
+                           user_coins=user_coins))
+    
+    # Đồng bộ cookie user_avatar
+    current_cookie_avatar = request.cookies.get('user_avatar')
+    db_user_avatar_url = user.avatar 
+    default_db_avatar_instance = Avatar.query.filter_by(price=0).first()
+    static_default_url = url_for('static', filename='images/default_avatar.png')
+
+    new_cookie_value = None
+    if db_user_avatar_url:
+        new_cookie_value = db_user_avatar_url
+    elif default_db_avatar_instance:
+        new_cookie_value = default_db_avatar_instance.image_url
+    else:
+        new_cookie_value = static_default_url
+
+    if new_cookie_value and current_cookie_avatar != new_cookie_value:
+        response.set_cookie('user_avatar', new_cookie_value, max_age=60*60*24*30)
+    elif not current_cookie_avatar and new_cookie_value: # Cookie chưa từng được set
+        response.set_cookie('user_avatar', new_cookie_value, max_age=60*60*24*30)
+        
+    return response
 
 @home_bp.route('/enter_name', methods=['GET', 'POST'])
 def enter_name():

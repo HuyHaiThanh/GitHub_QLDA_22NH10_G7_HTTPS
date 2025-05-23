@@ -1,5 +1,3 @@
-import random
-import string
 from flask import Flask
 from extensions import db, socketio
 import pymysql
