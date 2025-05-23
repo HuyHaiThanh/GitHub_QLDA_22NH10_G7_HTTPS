@@ -61,36 +61,29 @@
 
     <script>
       const socket = io();
-      const roomCode = "{{ game.room_code }}";
-      const gameId = "{{ game.game_id }}"; // Old game ID for context, if needed for leave
-
-      // It's important to join the specific game room to receive targeted messages
-      // However, 'game_restart' is emitted to f"game_{game.room_code}"
-      // which should be the same room the user was in.
+      const roomCodeForNotifications = "{{ game.room_code }}";
+      const oldGameId = "{{ game.game_id }}";
 
       socket.on("connect", () => {
         console.log("Connected to SocketIO server from waiting_replay page.");
-        // No specific room join needed here if after_game.py emits to the general game room
+        socket.emit("join_after_game_notifications", {
+          room_code: roomCodeForNotifications,
+        });
       });
 
       socket.on("game_restart", function (data) {
-        console.log("Game restart event received", data);
-        if (data.room_code === roomCode) {
-          // Ensure it's for this room
-          // Store the new game_id in a cookie or local storage if your game page relies on it
+        console.log("Game restart event received in waiting_replay", data);
+        if (data.room_code === roomCodeForNotifications) {
           document.cookie = `game_id=${data.new_game_id};path=/;max-age=${
             60 * 60 * 24
-          }`; // 24 hours
+          }`;
           window.location.href =
             "{{ url_for('pvp.pvp_game', room_code='') }}" + data.room_code;
         }
       });
 
-      // Optional: Listen for opponent leaving if you want to update UI
       socket.on("player_left", function (data) {
-        // Could redirect to home or show a message
         console.log("Opponent left while waiting for replay");
-        // Example: window.location.href = "{{ url_for('home.index') }}";
       });
     </script>
   </body>

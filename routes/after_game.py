@@ -1,10 +1,29 @@
 from flask import Blueprint, render_template, redirect, url_for, request, make_response
 from models import User, Game, Move
 from app import db, socketio
-from flask_socketio import emit
+from flask_socketio import emit, join_room
 import random
 
 after_game_bp = Blueprint('after_game', __name__)
+
+@socketio.on('join_after_game_notifications')
+def on_join_after_game_notifications(data):
+    room_code = data.get('room_code')
+    user_id = request.cookies.get('user_id')
+    if not room_code or not user_id:
+        print(f"[SocketIO join_after_game_notifications] Missing room_code or user_id. Data: {data}, User: {user_id}")
+        return
+    
+    user = User.query.get(user_id)
+    if not user:
+        print(f"[SocketIO join_after_game_notifications] User {user_id} not found.")
+        return
+
+    # User joins the specific room_code to listen for 'game_restart' or 'player_left' events for that game
+    join_room(room_code)
+    print(f"User {user.displayName} (ID: {user_id}) joined notification room: {room_code} from after_game/waiting_replay page.")
+    # Optionally, emit a confirmation back to the specific client
+    # emit('joined_notification_room', {'room': room_code, 'status': 'success'}, room=request.sid)
 
 @after_game_bp.route('/after_game/<int:game_id>')
 def index(game_id):
@@ -152,7 +171,7 @@ def replay(game_id):
                 'new_game_id': new_game.game_id,
                 'room_code': new_game.room_code,
                 'current_player_id': new_game.current_player_id
-            }, room=f"game_{game.room_code}") # Emit to the old game room
+            }, room=game.room_code) # Emit to the game_room_code directly
             
             # The redirection will be handled by the client-side JavaScript upon receiving 'game_restart'
             # So, the current player who initiated this (if both are ready) can just be returned a success

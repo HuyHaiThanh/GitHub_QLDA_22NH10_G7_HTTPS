@@ -33,7 +33,11 @@
                 readonly
                 style="flex-grow: 1"
               />
-              <button onclick="copyLink()" class="btn secondary-btn">
+              <button
+                onclick="copyLink()"
+                class="btn secondary-btn"
+                id="copyLinkBtn"
+              >
                 Sao chép
               </button>
             </div>
@@ -87,7 +91,15 @@
         copyText.select();
         copyText.setSelectionRange(0, 99999); /* For mobile devices */
         document.execCommand("copy");
-        alert("Đã sao chép link phòng: " + copyText.value);
+
+        // Update button text
+        var copyButton = document.getElementById("copyLinkBtn");
+        copyButton.innerText = "Đã sao chép!";
+
+        // Optionally, revert the button text after a few seconds
+        setTimeout(function () {
+          copyButton.innerText = "Sao chép";
+        }, 3000); // Reverts after 3 seconds
       }
     </script>
   </body>

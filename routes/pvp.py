@@ -25,65 +25,102 @@ def wait_for_opponent(room_code):
 
     return render_template('wait_for_opponent.htm', room_code=room_code, game_id=game.game_id, display_name=current_user_display_name)
 
-@pvp_bp.route('/pvp/game/<room_code>') # Changed route
-def pvp_game(room_code): # Changed function name from index
+@pvp_bp.route('/pvp/game/<room_code>')
+def pvp_game(room_code):
     user_id = request.cookies.get('user_id')
     game_id_cookie = request.cookies.get('game_id')
-    
+
     if not user_id:
         return redirect(url_for('home.enter_name', next=request.url))
-    
-    game = Game.query.filter_by(room_code=room_code).first()
+
+    game = None
+    if game_id_cookie:
+        game = Game.query.get(game_id_cookie)
+        if game and game.room_code != room_code:
+            # Game ID in cookie exists but is for a different room. Invalid state.
+            # Log this or handle as an error. For now, treat as game not found by cookie.
+            game = None
+        elif game and game.status == 'finished': # Game from cookie is already finished
+            game = None
+
+
     if not game:
-        return redirect(url_for('home.index', error='Game not found for this room code.'))
+        # Try to find an ongoing game in this room first
+        game = Game.query.filter_by(room_code=room_code, status='ongoing').first()
+        if not game:
+            # If no ongoing game, try to find a waiting game (for P2 to join scenario)
+            game = Game.query.filter_by(room_code=room_code, status='waiting').first()
+
+    if not game:
+        return redirect(url_for('home.index', error='Game not found or session invalid.'))
+
+    # If a game was found by room_code (not by cookie) and a game_id_cookie exists,
+    # they should ideally match if the user is supposed to be in this game.
+    # This check is more of a sanity check.
+    if game_id_cookie and str(game.game_id) != game_id_cookie and game.status == 'ongoing':
+         # User has a cookie for a specific game, but the ongoing game found by room_code is different.
+         # This could happen if they were redirected to a room with an old game_id cookie.
+         # Prioritize the game found by room_code if it's ongoing.
+         # Or, decide if this is an error state. For now, proceed with 'game' found by room_code.
+         pass
+
 
     user = User.query.get(user_id)
-    if not user: 
+    if not user:
         return redirect(url_for('home.enter_name', error='User not found.', next=request.url))
 
     is_player1 = str(game.player1_id) == user_id
     is_player2 = game.player2_id and str(game.player2_id) == user_id
 
     if not is_player1 and not is_player2:
-        # User is not in the game, attempt to join as Player 2
+        # User is not in the game, attempt to join as Player 2 if game is waiting
         if game.status == 'waiting' and not game.player2_id:
-            if str(game.player1_id) == user_id: 
-                 # This case should ideally not be hit if P1 is routed to wait_for_opponent correctly.
-                 # If P1 (creator) tries to access game URL directly while waiting for P2.
+            if str(game.player1_id) == user_id:
                  return redirect(url_for('pvp.wait_for_opponent', room_code=room_code))
             
             game.player2_id = user_id
             game.status = 'ongoing'
-            # current_player_id was set when P1 created the game.
-            # The client-side JS (pvp.htm) for P2 will emit 'join_pvp_room',
-            # which will then trigger 'opponent_joined' to P1.
             db.session.commit()
             is_player2 = True # User successfully joined as P2
+             # Emit event to notify P1 that P2 has joined
+            socketio.emit('opponent_joined_direct', {
+                'message': f'{user.displayName} has joined. The game will start!',
+                'room_code': game.room_code,
+                'player1_id': game.player1_id,
+                'player1_name': User.query.get(game.player1_id).displayName,
+                'player2_id': game.player2_id,
+                'player2_name': user.displayName,
+                'current_player_id': game.current_player_id,
+                'game_id': game.game_id,
+                'game_url': url_for('pvp.pvp_game', room_code=game.room_code, _external=True)
+            }, room=game.room_code) # Emit to the room
         else:
-            # Game is not joinable
             return redirect(url_for('home.index', error='This game is not available to join.'))
     
-    # If P1 accesses this page directly while game is still 'waiting' for P2
     if is_player1 and game.status == 'waiting' and not game.player2_id:
         return redirect(url_for('pvp.wait_for_opponent', room_code=room_code))
 
-    # If, after all checks, the user is not part of this game, redirect.
-    if not (is_player1 or is_player2):
-         return redirect(url_for('home.index', error='You are not authorized to participate in this game.'))
-        
+    if not (is_player1 or is_player2) and game.status == 'ongoing': # Check status ongoing here
+         return redirect(url_for('home.index', error='You are not authorized to participate in this ongoing game.'))
+    
+    # If game status is finished, redirect to after_game page
+    if game.status == 'finished':
+        # Ensure the user is part of this finished game before redirecting
+        if is_player1 or is_player2:
+            return redirect(url_for('after_game.index', game_id=game.game_id))
+        else:
+            # User is not part of this finished game
+            return redirect(url_for('home.index', error='This game has finished and you were not a player.'))
+
+
     opponent_id = game.player2_id if is_player1 else game.player1_id
     opponent = User.query.get(opponent_id) if opponent_id else None
     
     moves = Move.query.filter_by(game_id=game.game_id).order_by(Move.move_order).all()
     
     player1_obj_for_template = User.query.get(game.player1_id)
-    # Player 2 might have just been set in this request if they joined
-    player2_obj_for_template = User.query.get(game.player2_id) if game.player2_id else None 
+    player2_obj_for_template = User.query.get(game.player2_id) if game.player2_id else None
     
-    # Debug prints from before can be removed or kept as needed
-    # print(f"[DEBUG pvp_game] Rendering pvp.htm for user: {user_id}")
-    # ... other prints
-
     response = make_response(render_template('pvp.htm', 
                                             user=user,
                                             player1=player1_obj_for_template,
@@ -91,38 +128,82 @@ def pvp_game(room_code): # Changed function name from index
                                             opponent=opponent,
                                             game=game, 
                                             moves=moves,
-                                            is_player1=is_player1, # Pass this updated variable
+                                            is_player1=is_player1,
                                             room_code=game.room_code))
-    # Update cookie to this game's ID, useful if user was in another game before
     response.set_cookie('game_id', str(game.game_id), max_age=60*60*24)
     return response
 
 @socketio.on('join_pvp_room') # Renamed event
 def on_join_pvp_room(data):
-    room = data['room'] 
+    room_param = data['room'] 
     user_id = request.cookies.get('user_id')
+    game_id_cookie = request.cookies.get('game_id')
+
+    if not user_id:
+        emit('error', {'msg': 'User not identified.'}, room=request.sid)
+        return
+
     user = User.query.get(user_id)
-    display_name = user.displayName if user else 'Anonymous'
+    if not user:
+        emit('error', {'msg': 'User not found in database.'}, room=request.sid)
+        return
+        
+    display_name = user.displayName
+
+    game = None
+    # Try to get game by cookie first, if it matches the room and is ongoing/waiting
+    if game_id_cookie:
+        temp_game = Game.query.get(game_id_cookie)
+        if temp_game and temp_game.room_code == room_param and temp_game.status in ['ongoing', 'waiting']:
+            # Check if current user is part of this game from cookie
+            if str(temp_game.player1_id) == user_id or (temp_game.player2_id and str(temp_game.player2_id) == user_id):
+                game = temp_game
     
-    join_room(room)
-    print(f"{display_name} has joined room {room}")
-    emit('status', {'msg': f'{display_name} has joined the room.'}, room=room)
+    if not game:
+        # If game not found by cookie or cookie was invalid for this room/user, find by room_code
+        # Prioritize ongoing game for the room, then waiting game
+        game = Game.query.filter_by(room_code=room_param, status='ongoing').first()
+        if not game:
+            game = Game.query.filter_by(room_code=room_param, status='waiting').first()
+
+    if not game:
+        emit('error', {'msg': f'Game room {room_param} not found or not in a joinable state.'}, room=request.sid)
+        return
+
+    # Ensure client joins the correct room name used for general game events
+    join_room(game.room_code)
+    print(f"{display_name} has joined room {game.room_code} (game_id: {game.game_id})")
+    # Emit status to the specific room the user just joined
+    emit('status', {'msg': f'{display_name} has joined the room.'}, room=game.room_code)
     
-    game = Game.query.filter_by(room_code=room).first()
-    if game and game.player1_id and game.player2_id and game.status == 'ongoing':
+    # This event is primarily to notify player 1 when player 2 joins.
+    # Player 2 joining via URL is now handled in pvp_game with 'opponent_joined_direct'.
+    # This handler can still be useful if P2 joins via entering room code in pvp_noti.htm
+    # or if P1 re-enters wait_for_opponent.htm.
+    if game.player1_id and game.player2_id and game.status == 'ongoing':
+        # This condition means both players are set and game is ongoing.
+        # This is the point where P1 (if waiting) should be notified that P2 is in.
         player1 = User.query.get(game.player1_id)
         player2 = User.query.get(game.player2_id)
-        print(f"[SocketIO on_join_pvp_room] Emitting 'opponent_joined'. Game status: {game.status}, current_player_id from DB: {game.current_player_id}")
-        emit('opponent_joined', {
-            'message': f'{player2.displayName if player2 else "Opponent"} has joined. The game will start!',
-            'room_code': room,
-            'player1_id': game.player1_id, 
-            'player1_name': player1.displayName if player1 else "Player 1",
-            'player2_id': game.player2_id, 
-            'player2_name': player2.displayName if player2 else "Player 2",
-            'current_player_id': game.current_player_id,
-            'game_url': url_for('pvp.pvp_game', room_code=room, _external=True)
-        }, room=room)
+        
+        # Check if the user emitting 'join_pvp_room' is actually P2
+        # and P1 is the one to be notified.
+        if str(game.player2_id) == user_id:
+            print(f"[SocketIO on_join_pvp_room] P2 ({display_name}) confirmed in ongoing game. Notifying P1.")
+            emit('opponent_joined', {
+                'message': f'{player2.displayName} has joined. The game will start!',
+                'room_code': game.room_code,
+                'player1_id': game.player1_id, 
+                'player1_name': player1.displayName,
+                'player2_id': game.player2_id, 
+                'player2_name': player2.displayName,
+                'current_player_id': game.current_player_id,
+                'game_id': game.game_id,
+                'game_url': url_for('pvp.pvp_game', room_code=game.room_code, _external=True)
+            }, room=game.room_code) # Emit to the room, P1 should get this in wait_for_opponent.htm
+    elif game.status == 'waiting' and str(game.player1_id) == user_id:
+        print(f"[SocketIO on_join_pvp_room] P1 ({display_name}) re-joined waiting room.")
+        # P1 is in wait_for_opponent.htm, no need to emit 'opponent_joined' yet.
 
 @socketio.on('leave_pvp_room') # Renamed event
 def on_leave_pvp_room(data):
@@ -281,7 +362,7 @@ def give_up():
     db.session.commit()
     
     # Emit game_over event to both players
-    socketio.emit('game_over', {'reason': 'Player gave up'}, room=f"game_{game.room_code}")
+    socketio.emit('game_over', {'reason': 'Player gave up'}, room=game.room_code)
     
     # Update leaderboard for both players
     if game.player1_id == session['user_id']:

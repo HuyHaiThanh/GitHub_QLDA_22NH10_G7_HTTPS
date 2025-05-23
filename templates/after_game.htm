@@ -195,16 +195,18 @@
     <script>
       // SocketIO for game restart
       const socket = io();
-      const currentRoomCode = "{{ game.room_code }}"; // Get room_code from the rendered game object
+      const currentRoomCodeForNotifications = "{{ game.room_code }}";
 
       socket.on("connect", () => {
         console.log("Connected to SocketIO server from after_game page.");
-        // No specific room join needed here if after_game.py emits to the general game room
+        socket.emit("join_after_game_notifications", {
+          room_code: currentRoomCodeForNotifications,
+        });
       });
 
       socket.on("game_restart", function (data) {
         console.log("Game restart event received on after_game page", data);
-        if (data.room_code === currentRoomCode) {
+        if (data.room_code === currentRoomCodeForNotifications) {
           // Ensure it's for this room
           document.cookie = `game_id=${data.new_game_id};path=/;max-age=${
             60 * 60 * 24

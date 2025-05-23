@@ -455,7 +455,12 @@ body {
 }
 
 .secondary-btn:hover {
-    background-color: #263850;
+    background-color: #2a3a51;
+}
+
+#copyLinkBtn {
+    min-width: 150px;
+    text-align: center;
 }
 
 .danger-btn {
@@ -1127,4 +1132,17 @@ img {
 
 .no-items a:hover {
     text-decoration: underline;
+}
+
+/* Shake animation for incorrect turn */
+@keyframes shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-5px); }
+  100% { transform: translateX(0); }
+}
+
+.shake {
+  animation: shake 0.5s ease-in-out;
 }
