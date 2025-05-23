@@ -11,6 +11,33 @@ def generate_user_id():
     """Tạo ID ngẫu nhiên gồm 10 ký tự."""
     return ''.join(random.choices(string.ascii_letters + string.digits, k=10))
 
+def create_new_user(user_id, display_name):
+    """Tạo người dùng mới và lưu vào cơ sở dữ liệu."""
+    user = User.query.get(user_id)
+    if not user:
+        user = User(user_id=user_id, displayName=display_name)
+        # Gán avatar và skin mặc định nếu cần
+        default_avatar = Avatar.query.filter_by(name='Default Avatar').first()
+        default_skin = Skin.query.filter_by(name='Default Skin').first()
+        if default_avatar:
+            user.avatar_id = default_avatar.avatar_id
+            user.avatar = default_avatar.image_url 
+        if default_skin:
+            user.skin_id = default_skin.skin_id
+            user.skin = default_skin.image_url
+        db.session.add(user)
+        db.session.commit()
+
+        # Thêm vào bảng UserAvatar và UserSkin (nếu có avatar/skin mặc định)
+        if default_avatar:
+            user_avatar = UserAvatar(user_id=user.user_id, avatar_id=default_avatar.avatar_id)
+            db.session.add(user_avatar)
+        if default_skin:
+            user_skin = UserSkin(user_id=user.user_id, skin_id=default_skin.skin_id)
+            db.session.add(user_skin)
+        db.session.commit()
+    return user
+
 @home_bp.route('/')
 def index():
     # Kiểm tra xem người chơi đã có tên và ID trong cookie chưa
@@ -25,9 +52,7 @@ def index():
     user = User.query.get(user_id)
     if not user:
         # Tạo người dùng mới nếu không tìm thấy
-        user = User(user_id=user_id, displayName=display_name)
-        db.session.add(user)
-        db.session.commit()
+        user = create_new_user(user_id, display_name)
 
     # Lấy dữ liệu leaderboard thực từ cơ sở dữ liệu
     leaderboard_data = db.session.query(
@@ -191,9 +216,7 @@ def enter_name():
         user_id = generate_user_id()
 
         # Lưu vào cơ sở dữ liệu
-        user = User(user_id=user_id, displayName=display_name)
-        db.session.add(user)
-        db.session.commit()
+        user = create_new_user(user_id, display_name)
 
         # Lưu vào cookie
         response = make_response(redirect(url_for('home.index')))

@@ -15,6 +15,7 @@ Game cờ caro trực tuyến được xây dựng bằng Python Flask và Socke
 ## Cài đặt
 
 1. Tạo môi trường ảo và kích hoạt:
+
 ```
 pip install flask flask-socketio pymysql flask-sqlalchemy
 venv\Scripts\activate  # Windows
@@ -22,6 +23,7 @@ source venv/bin/activate  # Linux/Mac
 ```
 
 2. Cài đặt các gói phụ thuộc:
+
 ```
 pip install flask flask-socketio pymysql flask-sqlalchemy
 ```
@@ -29,6 +31,7 @@ pip install flask flask-socketio pymysql flask-sqlalchemy
 3. Tạo cơ sở dữ liệu MySQL với tên `CaroPython`
 
 4. Khởi động ứng dụng:
+
 ```
 python app.py
 ```
@@ -52,6 +55,6 @@ python seed_leaderboard.py  # Tạo dữ liệu cho bảng xếp hạng
 
 - Đăng nhập bằng tên hiển thị
 - Chơi với AI (robot)
-- Chơi với người chơi khác (qua mã phòng hoặc QR code)
+- Chơi với người chơi khác (qua mã phòng)
 - Bảng xếp hạng
-- Avatar và skin tùy chỉnh 
+- Avatar và skin tùy chỉnh
