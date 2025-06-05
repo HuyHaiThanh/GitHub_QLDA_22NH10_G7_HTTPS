@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Đang chờ chơi lại - Caro Game</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background-color: #14202e;
+        color: white;
+        font-family: Arial, sans-serif;
+      }
+      .waiting-container {
+        text-align: center;
+        padding: 20px;
+        background-color: #1c2c40;
+        border-radius: 10px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+      }
+      .spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top: 4px solid #14cca8;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="waiting-container">
+      <h2>Đang chờ đối thủ đồng ý chơi lại...</h2>
+      <div class="spinner"></div>
+      <p>Phòng: {{ game.room_code }}</p>
+      <p>
+        <a
+          href="{{ url_for('after_game.leave_room', game_id=game.game_id) }}"
+          class="btn secondary-btn"
+          >Hủy và thoát</a
+        >
+      </p>
+    </div>
+
+    <script>
+      const socket = io();
+      const roomCodeForNotifications = "{{ game.room_code }}";
+      const oldGameId = "{{ game.game_id }}";
+
+      socket.on("connect", () => {
+        console.log("Connected to SocketIO server from waiting_replay page.");
+        socket.emit("join_after_game_notifications", {
+          room_code: roomCodeForNotifications,
+        });
+      });
+
+      socket.on("game_restart", function (data) {
+        console.log("Game restart event received in waiting_replay", data);
+        document.cookie = `game_id=${data.new_game_id};path=/;max-age=${
+          60 * 60 * 24
+        }`;
+        window.location.href =
+          "{{ url_for('pvp.pvp_game', room_code='') }}" + data.room_code;
+      });
+
+      socket.on("player_left", function (data) {
+        console.log("Opponent left while waiting for replay");
+      });
+    </script>
+  </body>
+</html>

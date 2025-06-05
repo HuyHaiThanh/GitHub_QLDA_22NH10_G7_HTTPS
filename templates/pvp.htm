@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Play with Friend - Caro Game</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+      .chat-input-area {
+        display: flex;
+        align-items: stretch; /* Làm cho các item cao bằng nhau */
+        margin-bottom: 5px;
+        width: 100%; /* Đảm bảo không vượt quá container cha */
+        box-sizing: border-box; /* Tính cả padding và border vào width */
+      }
+
+      #chat-input {
+        flex-grow: 1;
+        /* margin-right: 8px; /* Không còn nút send */
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1em;
+        box-sizing: border-box;
+      }
+
+      .icon-select-area {
+        /* margin-top: 5px; /* Không cần nếu chat-input-area đã có margin-bottom */
+        /* border-top: 1px solid #eee; /* Đường kẻ phân cách tùy chọn */
+        padding-top: 5px;
+      }
+
+      .icon-list {
+        display: flex;
+        flex-wrap: nowrap; /* Ngăn icon xuống dòng */
+        overflow-x: auto; /* Cho phép scroll ngang nếu nhiều icon */
+        padding-bottom: 5px; /* Để thanh scroll không che icon */
+        max-height: 40px; /* Giới hạn chiều cao của vùng icon */
+      }
+
+      .chat-icon {
+        width: 30px; /* Kích thước icon trong danh sách chọn */
+        height: 30px;
+        margin-right: 5px;
+        cursor: pointer;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        object-fit: contain; /* Đảm bảo icon hiển thị trọn vẹn */
+      }
+      .chat-icon:hover {
+        border-color: #ddd;
+        background-color: #f0f0f0;
+      }
+
+      .chat-icon-in-msg {
+        width: 24px; /* Kích thước icon trong tin nhắn */
+        height: 24px;
+        vertical-align: middle; /* Căn giữa icon với text */
+        margin: 0 2px; /* Khoảng cách nhỏ với text xung quanh */
+      }
+      .no-icons-notice {
+        font-size: 0.9em;
+        color: #888;
+        padding: 5px 0;
+        text-align: center;
+        width: 100%;
+      }
+      .flash-messages li.warning {
+        background-color: #ffc107;
+        color: #212529; /* Màu chữ cho warning */
+      }
+      .after-game-controls .btn.full-width {
+        width: 100%;
+        margin-left: 0; /* Remove margin if it's the only button */
+        margin-right: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="game-container">
+      <div class="game-header">
+        <!-- Player 1 Info -->
+        <div class="player-info">
+          <div class="player-avatar player1">
+            <img
+              src="{{ player1.avatar if player1.avatar else url_for('static', filename='images/avatar_0.png') }}"
+              alt="Player 1"
+            />
+          </div>
+          <div class="player-details">
+            <span class="player-name">{{ player1.displayName }}</span>
+            <span class="timer-display" id="player1-timer">0:30</span>
+          </div>
+        </div>
+
+        <!-- Center Info -->
+        <div class="game-center-info">
+          <span class="coin-display">
+            🪙 {{ user.coins if user.coins else '0' }}
+          </span>
+        </div>
+
+        <!-- Player 2 Info -->
+        <div class="player-info right">
+          <div class="player-details">
+            <span class="player-name"
+              >{{ player2.displayName if player2 else 'Đang chờ...' }}</span
+            >
+            <span class="timer-display" id="player2-timer">0:30</span>
+          </div>
+          <div class="player-avatar player2">
+            <img
+              src="{{ player2.avatar if player2 and player2.avatar else url_for('static', filename='images/avatar_1.png') }}"
+              alt="Player 2"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Game Area -->
+      <div class="game-area">
+        <!-- Game Board -->
+        <div class="game-board" id="game-board">
+          <!-- Board will be generated via JavaScript -->
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-area">
+          <div class="chat-messages" id="chat-messages">
+            <!-- Messages will be added dynamically -->
+          </div>
+
+          <div class="chat-input-area">
+            <input type="text" id="chat-input" placeholder="Viết tin nhắn..." />
+          </div>
+          <div class="icon-select-area">
+            <div class="icon-list" id="icon-list">
+              {% for icon in user_skins %}
+              <img
+                src="{{ icon.image_url }}"
+                class="chat-icon"
+                data-icon-url="{{ icon.image_url }}"
+                title="{{ icon.name }}"
+                alt="{{ icon.name }}"
+              />
+              {% else %}
+              <p class="no-icons-notice">Bạn chưa sở hữu icon nào.</p>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Game Controls -->
+      <div class="game-controls">
+        <button class="give-up-btn">
+          Từ bỏ
+          <span class="key-hint">Esc</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Game Over Modal (Hidden by default) -->
+    <div class="game-over-modal" id="game-over-modal" style="display: none">
+      <div class="modal-content">
+        <div class="winner-display">
+          <div class="progress-bar">
+            <div class="progress" id="progress-bar"></div>
+            <div class="avatar-indicator" id="winner-avatar">
+              <img
+                src="{{ url_for('static', filename='images/avatar_0.png') }}"
+                alt="Winner"
+              />
+            </div>
+          </div>
+
+          <p class="game-result" id="game-result">
+            Đối thủ của bạn muốn chơi lại
+          </p>
+
+          <div class="after-game-controls">
+            <button class="btn primary-btn" id="play-again-btn">
+              Chơi lại
+              <span class="key-hint">↵ Enter</span>
+            </button>
+            <button class="btn secondary-btn" id="leave-room-btn">
+              Rời khỏi phòng
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+        // Connect to Socket.IO
+        const socket = io();
+        const roomCode = "{{ room_code }}";
+        const userId = "{{ user.user_id }}";
+        const userDisplayName = "{{ user.displayName }}";
+        const isPlayer1 = {{ is_player1 | tojson }};
+        const playerNum = isPlayer1 ? 1 : 2;
+
+        // Initialize game state object
+        let game = {
+            id: {{ game.game_id | tojson }},
+            player1_id: {{ player1.user_id | tojson }},
+            player2_id: {{ player2.user_id | tojson if player2 else 'null' }},
+            current_player_id: {{ game.current_player_id | tojson }},
+            board: Array(15).fill(null).map(() => Array(15).fill(0)),
+            isOver: false
+        };
+        console.log("Initial client game state:", JSON.parse(JSON.stringify(game)));
+
+        // New global timer variables
+        let turnTimerInterval;
+        let turnTimeLeft = 30;
+
+        // Join the PVP room
+        socket.on('connect', () => {
+            console.log('Connected to SocketIO server from PVP game room.');
+            socket.emit('join_pvp_room', {
+                room: roomCode,
+                display_name: userDisplayName
+            });
+        });
+
+        // Game state
+        let board = Array(15).fill().map(() => Array(15).fill(0));
+        let currentPlayer = 1;  // 1 for player 1, 2 for player 2
+        let gameOver = false;
+
+        // Initialize the game board
+        function initBoard() {
+            const boardElement = document.getElementById('game-board');
+            boardElement.innerHTML = '';
+
+            for (let y = 0; y < 15; y++) {
+                for (let x = 0; x < 15; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'board-cell';
+                    cell.dataset.x = x;
+                    cell.dataset.y = y;
+                    cell.addEventListener('click', () => makeMove(x, y));
+                    boardElement.appendChild(cell);
+                }
+            }
+        }
+
+        // Make a move
+        function makeMove(x, y) {
+            console.log(`makeMove called for x: ${x}, y: ${y}. Current player ID: ${game.current_player_id}, This user ID: ${userId}`);
+            if (game.isOver || game.board[y][x] !== 0) {
+                console.log('makeMove: Game over or cell not empty.');
+                return;
+            }
+            // Kiểm tra lượt chơi client-side
+            if (String(game.current_player_id) !== String(userId)) {
+                console.log('makeMove: Not your turn! (Client-side check)');
+                const boardElement = document.getElementById('game-board');
+                boardElement.classList.add('shake');
+                setTimeout(() => {
+                    boardElement.classList.remove('shake');
+                }, 500); // Shake duration 0.5s
+                return;
+            }
+
+            const moveData = {
+                game_id: game.id, // Use game.id
+                x: x,
+                y: y,
+                player_id: userId,
+                room: roomCode
+            };
+            console.log('Emitting make_move with data:', moveData);
+            socket.emit('make_move', moveData);
+        }
+
+        // Update the UI to reflect the current board state
+        function updateBoardUI(moved_x, moved_y, moved_player_id) {
+            console.log(`updateBoardUI called for x: ${moved_x}, y: ${moved_y}, player_id: ${moved_player_id}`);
+            const cell = document.querySelector(`.board-cell[data-x='${moved_x}'][data-y='${moved_y}']`);
+
+            // Chỉ cập nhật nếu ô tồn tại và CHƯA CÓ NỘI DUNG (chưa có .move-symbol bên trong)
+            if (cell && !cell.querySelector('.move-symbol')) {
+                console.log("Cell found and is empty (no .move-symbol child):", cell);
+                console.log("Comparing moved_player_id with game.player1_id:", String(moved_player_id), String(game.player1_id));
+                console.log("Comparing moved_player_id with game.player2_id:", String(moved_player_id), String(game.player2_id));
+
+                let playerClass = '';
+                let symbolText = '';
+
+                if (String(moved_player_id) === String(game.player1_id)) {
+                    playerClass = 'player1';
+                    symbolText = 'X';
+                    game.board[moved_y][moved_x] = 1;
+                } else if (String(moved_player_id) === String(game.player2_id)) {
+                    playerClass = 'player2';
+                    symbolText = 'O';
+                    game.board[moved_y][moved_x] = 2;
+                } else {
+                    console.error("Error: moved_player_id did not match player1_id or player2_id in updateBoardUI.");
+                    console.log("Details: moved_player_id:", moved_player_id, "game.player1_id:", game.player1_id, "game.player2_id:", game.player2_id);
+                    return;
+                }
+
+                cell.classList.add(playerClass); // Thêm class player1/player2 vào .board-cell
+
+                const symbolElement = document.createElement('span');
+                symbolElement.className = 'move-symbol';
+                symbolElement.textContent = symbolText; // Đặt X hoặc O vào đây
+                cell.appendChild(symbolElement); // Chèn vào trong .board-cell
+
+                console.log(`Added class ${playerClass} to cell and appended .move-symbol with text '${symbolText}':`, cell);
+
+            } else if (cell && cell.querySelector('.move-symbol')) {
+                console.warn("Cell already has a .move-symbol, not updating UI again for this move:", cell);
+            } else {
+                console.error("Error: Cell NOT found for updateBoardUI with x,y:", moved_x, moved_y);
+            }
+        }
+
+        // Send chat message
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+
+            if (message) {
+                socket.emit('chat_message', {
+                    room: roomCode,
+                    message: message
+                });
+
+                input.value = '';
+            }
+        }
+
+        // Send icon message
+        function sendIcon(iconUrl) {
+            socket.emit('chat_message', {
+                room: roomCode,
+                icon_url: iconUrl
+            });
+        }
+
+        // Add message to chat
+        function addMessage(sender, message, time, iconUrl = null) {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageElement = document.createElement('div');
+            messageElement.className = 'chat-message';
+
+            // Add right class if message is from current user
+            if (sender === userDisplayName) {
+                messageElement.classList.add('self');
+            }
+
+            let messageContentHtml = '';
+            if (iconUrl) {
+                messageContentHtml = `<img src="${iconUrl}" class="chat-icon-in-msg" alt="icon">`;
+            } else {
+                messageContentHtml = message;
+            }
+
+            messageElement.innerHTML = `
+                <span class="message-content">${messageContentHtml}</span>
+                <span class="message-time">${time}</span>
+            `;
+
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Show game over screen
+        function showGameOver(winnerName, isCurrentUserWinner, customReason = null) {
+            const modal = document.getElementById('game-over-modal');
+            const result = document.getElementById('game-result');
+            const progressBar = document.getElementById('progress-bar');
+            const winnerAvatar = document.getElementById('winner-avatar');
+            const playAgainBtn = document.getElementById('play-again-btn');
+            const leaveRoomBtn = document.getElementById('leave-room-btn'); // Get leave button
+
+            playAgainBtn.disabled = false; // Re-enable button when modal shows
+            playAgainBtn.textContent = 'Chơi lại';
+
+            if (customReason) { // This implies someone gave up or another specific reason
+                result.textContent = customReason;
+                playAgainBtn.style.display = 'none'; // Hide play again button
+                // Optionally, adjust leave button styling if needed, e.g., make it more prominent
+                leaveRoomBtn.classList.add('full-width'); // Example: add a class to make it wider
+            } else if (isCurrentUserWinner) {
+                result.textContent = 'Bạn đã thắng!';
+                playAgainBtn.style.display = 'inline-block'; // Ensure play again is visible
+                leaveRoomBtn.classList.remove('full-width'); // Remove class if it was added
+                progressBar.style.width = '70%';
+                winnerAvatar.querySelector('img').src = "{{ url_for('static', filename='images/avatar_0.png' if is_player1 else 'avatar_1.png') }}";
+            } else {
+                result.textContent = 'Bạn đã thua!';
+                playAgainBtn.style.display = 'inline-block'; // Ensure play again is visible
+                leaveRoomBtn.classList.remove('full-width'); // Remove class if it was added
+                progressBar.style.width = '30%';
+                winnerAvatar.querySelector('img').src = "{{ url_for('static', filename='images/avatar_1.png' if is_player1 else 'avatar_0.png') }}";
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        // Request replay
+        function requestReplay() {
+            const playAgainBtn = document.getElementById('play-again-btn');
+            playAgainBtn.disabled = true; // Disable button after click
+            playAgainBtn.textContent = 'Đang chờ...';
+
+            socket.emit('replay_request', {
+                room: roomCode, // old room_code
+                game_id: game.id   // old game_id
+            });
+
+            // No longer changing game-result text here directly to "Đang chờ đối thủ..."
+            // It will be updated by 'opponent_wants_replay' or when the new game starts.
+        }
+
+        // Event listeners
+        document.getElementById('play-again-btn').addEventListener('click', requestReplay);
+        document.getElementById('leave-room-btn').addEventListener('click', () => {
+            window.location.href = "{{ url_for('home.index') }}";
+        });
+
+        document.querySelector('.give-up-btn').addEventListener('click', () => {
+            if (confirm('Bạn có chắc chắn muốn từ bỏ?')) {
+                // Instead of redirect, emit a socket event
+                socket.emit('player_gave_up', {
+                    room: roomCode,
+                    game_id: game.id
+                });
+            }
+        });
+
+        document.getElementById('chat-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Socket.IO events
+        socket.on('status', (data) => {
+            console.log('Status message:', data.msg);
+            const now = new Date();
+            const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            addMessage("System", data.msg, timeString);
+        });
+
+        socket.on('new_message', (data) => {
+            addMessage(data.sender, data.message, data.time, data.icon_url);
+        });
+
+        socket.on('move_made', (data) => {
+            console.log('Move made:', data);
+            updateBoardUI(data.x, data.y, data.player_id);
+            if (data.next_player_id) {
+              game.current_player_id = data.next_player_id;
+            }
+            highlightCurrentPlayer(); // Gọi sau khi cập nhật current_player_id
+            startOrResetTurnTimer();
+        });
+
+        socket.on('game_over', (data) => {
+            game.isOver = true;
+            clearInterval(turnTimerInterval); // Clear timer interval on game over
+            console.log('Game Over:', data);
+            highlightCurrentPlayer(); // Xóa highlight lượt khi game over
+
+            // Instead of showing a modal, redirect to the after_game page
+            if (game && game.id) {
+                window.location.href = `/after_game/${game.id}`;
+            } else {
+                console.error("Game ID not found, cannot redirect to after_game page.");
+                // Fallback: redirect to home or show a generic error
+                window.location.href = "{{ url_for('home.index') }}";
+            }
+        });
+
+        socket.on('error', (data) => {
+            console.error('Error from server:', data.msg);
+            alert("Lỗi: " + data.msg);
+        });
+
+        socket.on('opponent_joined', (data) => {
+          console.log('Opponent joined data from server:', data);
+          const player2NameElement = document.querySelector(".player-info.right .player-name");
+          if (player2NameElement && data.player2_name) {
+              player2NameElement.textContent = data.player2_name;
+          }
+          if (data.player1_id) {
+              game.player1_id = data.player1_id;
+          }
+          if (data.player2_id) {
+              game.player2_id = data.player2_id;
+          }
+          // Update current_player_id directly from server data
+          if (data.current_player_id) { // Check if current_player_id is provided
+            game.current_player_id = data.current_player_id;
+          }
+
+          console.log("Client game state after opponent_joined:", JSON.parse(JSON.stringify(game)));
+          highlightCurrentPlayer(); // Gọi khi đối thủ join và có current_player_id
+          startOrResetTurnTimer();
+      });
+
+        socket.on('force_redirect_home', (data) => {
+            console.log('Force redirect home:', data);
+            if (data.reason) {
+                // Store the message in sessionStorage to display on the home page after redirect
+                sessionStorage.setItem('flash_message', data.reason);
+                sessionStorage.setItem('flash_category', 'error'); // Assuming it's an error
+            }
+            window.location.href = "{{ url_for('home.index') }}";
+        });
+
+        socket.on('redirect_after_action', (data) => {
+            console.log('Redirect after action:', data);
+            if (data.message) {
+                sessionStorage.setItem('flash_message', data.message);
+                sessionStorage.setItem('flash_category', data.category || 'info');
+            }
+            if (data.redirect_url) {
+                window.location.href = data.redirect_url;
+            } else {
+                // Fallback to home if no specific URL is provided
+                window.location.href = "{{ url_for('home.index') }}";
+            }
+        });
+
+        socket.on('start_new_pvp_game', (data) => {
+            console.log('Received start_new_pvp_game with data:', data);
+            if (data.new_room_code) {
+                // Redirect to the new game room
+                window.location.href = `/pvp/game/${data.new_room_code}`;
+            }
+        });
+
+        socket.on('opponent_wants_replay', (data) => {
+            console.log('Opponent wants replay:', data);
+            const gameResultElement = document.getElementById('game-result');
+            if (gameResultElement) {
+                 gameResultElement.textContent = `${data.player_name || 'Đối thủ'} muốn chơi lại!`;
+            }
+            // Optionally, if current user hasn't clicked replay, keep their button active
+            // or change its text to "Đồng ý chơi lại"
+        });
+
+        // New unified timer function
+        function startOrResetTurnTimer() {
+            clearInterval(turnTimerInterval);
+            turnTimeLeft = 30;
+
+            updateTimerDisplay(true);  // Update P1 timer UI
+            updateTimerDisplay(false); // Update P2 timer UI
+
+            if (game.isOver || !game.player2_id) { // If game over OR P2 hasn't joined, don't run interval
+                return;
+            }
+
+            turnTimerInterval = setInterval(() => {
+                if (game.isOver) { // Double check in case game ends during interval
+                    clearInterval(turnTimerInterval);
+                    return;
+                }
+
+                turnTimeLeft--;
+                updateTimerDisplay(true);
+                updateTimerDisplay(false);
+
+                if (turnTimeLeft < 0) { // Use < 0 to ensure it triggers after 0 is displayed
+                    clearInterval(turnTimerInterval);
+                    // Only the player whose turn it ACTUALLY IS should signal the server
+                    if (String(game.current_player_id) === String(userId) && !game.isOver) {
+                        console.log("Time is up for current user! Emitting time_up_forfeit.");
+                        socket.emit('time_up_forfeit', {
+                            room: roomCode,
+                            game_id: game.id,
+                            player_id: userId // The player whose time ran out
+                        });
+                    }
+                }
+            }, 1000);
+        }
+
+        // Revised updateTimerDisplay function
+        function updateTimerDisplay(isForPlayer1) {
+            const timerElementId = isForPlayer1 ? 'player1-timer' : 'player2-timer';
+            const timerDisplay = document.getElementById(timerElementId);
+            if (!timerDisplay) return;
+
+            const playerInQuestionId = isForPlayer1 ? game.player1_id : game.player2_id;
+
+            if (!game.player2_id) { // P2 hasn't joined yet
+                timerDisplay.textContent = "0:30";
+                const isCurrent = String(game.current_player_id) === String(playerInQuestionId);
+                timerDisplay.style.fontWeight = isCurrent ? 'bold' : 'normal';
+                 // Ensure player 1 timer is bold if they are current and p2 not joined
+                if (isForPlayer1 && String(game.current_player_id) === String(game.player1_id)) {
+                    timerDisplay.style.fontWeight = 'bold';
+                } else if (!isForPlayer1) { // Player 2's timer before join
+                     timerDisplay.style.fontWeight = 'normal';
+                }
+
+            } else { // P2 has joined, game is active or over
+                if (String(game.current_player_id) === String(playerInQuestionId) && !game.isOver) {
+                    timerDisplay.textContent = `0:${turnTimeLeft >= 0 ? turnTimeLeft.toString().padStart(2, '0') : '00'}`;
+                    timerDisplay.style.fontWeight = 'bold';
+                } else {
+                    timerDisplay.textContent = "0:30"; // Non-current player or game over shows 0:30
+                    timerDisplay.style.fontWeight = 'normal';
+                }
+            }
+        }
+
+        function highlightCurrentPlayer() {
+            const player1Info = document.querySelector('.player-info:not(.right)');
+            const player2Info = document.querySelector('.player-info.right');
+
+            // Xóa class active của cả 2 trước
+            if(player1Info) player1Info.classList.remove('active-turn');
+            if(player2Info) player2Info.classList.remove('active-turn');
+
+            if (game.isOver) return; // Không làm gì nếu game đã kết thúc
+
+            if (String(game.current_player_id) === String(game.player1_id) && player1Info) {
+                player1Info.classList.add('active-turn');
+            } else if (String(game.current_player_id) === String(game.player2_id) && player2Info) {
+                player2Info.classList.add('active-turn');
+            }
+            console.log(`Highlighting turn for: ${game.current_player_id}. Player1 active: ${player1Info ? player1Info.classList.contains('active-turn') : 'N/A'}, Player2 active: ${player2Info ? player2Info.classList.contains('active-turn') : 'N/A'}`);
+        }
+
+        // Initialize the game
+        initBoard();
+        console.log("Initial game state for UI highlight:", JSON.parse(JSON.stringify(game)));
+        highlightCurrentPlayer(); // Gọi khi load game lần đầu
+        startOrResetTurnTimer(); // Initial timer setup
+
+        // Add event listeners for icons
+        document.querySelectorAll('.chat-icon').forEach(icon => {
+            icon.addEventListener('click', function() {
+                sendIcon(this.dataset.iconUrl);
+            });
+        });
+    </script>
+  </body>
+</html>
