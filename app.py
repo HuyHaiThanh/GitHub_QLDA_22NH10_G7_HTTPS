@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from extensions import db, socketio
 import pymysql
@@ -6,13 +7,15 @@ pymysql.install_as_MySQLdb()
 
 def create_app():
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = 'caro_game_secret_key'
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:1234@localhost/CaroPython'
+    # Sử dụng biến môi trường cho các thông tin nhạy cảm
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'caro_game_secret_key')
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'mysql+pymysql://root:1234@localhost/CaroPython')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SERVER_NAME'] = os.environ.get('SERVER_NAME')
 
     # Initialize extensions
     db.init_app(app)
-    socketio.init_app(app)
+    socketio.init_app(app, cors_allowed_origins="*")
     
     # Add Jinja2 functions
     app.jinja_env.globals.update(enumerate=enumerate)
@@ -42,5 +45,7 @@ def create_app():
 if __name__ == '__main__':
     app = create_app()
     with app.app_context():
-        db.create_all()  # Chỉ tạo bảng Game
-    socketio.run(app, debug=True, host='0.0.0.0')
+        db.create_all()
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_ENV', 'development') == 'development'
+    socketio.run(app, debug=debug, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
